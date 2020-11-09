@@ -5,6 +5,7 @@
     "description": "",
     "main": "dist/index.js",
     "scripts": {
+        "prestart": "npm run build",
         "start": "node .",
         "dev": "ts-node --project ./tsconfig.json ./src/index.ts",
         "build": "tsc"
