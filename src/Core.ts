@@ -12,7 +12,7 @@ import ytdl from "ytdl-core";
 import _ from "lodash";
 import dayjs, { Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Emojis } from "./Utils";
+import { Emojis, getLocaleFromDuration, getTrackParamsFromYtdl } from "./Utils";
 
 dayjs.extend(duration);
 
@@ -96,6 +96,10 @@ export class Track {
             .replace(/\\(\*|_|`|~|\\)/g, "$1")
             .replace(/(\*|_|`|~|\\)/g, "\\$1");
         this.requester = userID;
+        this._duration(video);
+    }
+
+    private _duration(video: { uploadedAt?: string; duration?: number }) {
         if (video.uploadedAt) this.published = video.uploadedAt;
         if (video.duration) {
             this.duration = video.duration;
@@ -103,14 +107,14 @@ export class Track {
         }
     }
 
+    async update() {
+        const info = await ytdl.getBasicInfo(this.url);
+        this._duration(getTrackParamsFromYtdl(info));
+    }
+
     durationHuman() {
         if (!this.durationObj) return undefined;
-        const { days, hours, minutes, seconds } = this.durationObj;
-        const str = (n: any) => (n ? `${n}` : "");
-        return [days, hours, minutes, seconds]
-            .map(str)
-            .filter((s) => !!s)
-            .join(":");
+        return getLocaleFromDuration(this.durationObj);
     }
 
     getStream() {
@@ -131,6 +135,8 @@ export class GuildAudioManager {
     voiceChannel: VoiceChannel;
     connection?: VoiceConnection;
     dispatcher?: StreamDispatcher;
+    private _dontChangeIndex?: boolean;
+    private lastMessage?: Message;
 
     constructor(textChannel: TextChannel, voiceChannel: VoiceChannel) {
         this._songs = [];
@@ -158,7 +164,7 @@ export class GuildAudioManager {
 
     removeTrack(position: number) {
         if (!this._songs[position]) throw new Error("Invalid song index");
-        this._songs.splice(position, 1);
+        this._songs = this._songs.splice(position, 1);
     }
 
     clearQueue() {
@@ -190,22 +196,21 @@ export class GuildAudioManager {
     stop() {
         if (!this.connection || !this.dispatcher)
             throw new Error("Nothing is being played");
-        this.clearQueue();
-        this.dispatcher.end();
-        this.connection.disconnect();
-        return true;
+        this.cleanup();
     }
 
     skip() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
         this.incrementIndex(true);
-        this.dispatcher.end(false);
+        this._dontChangeIndex = true;
+        this.dispatcher.end();
     }
 
     previous() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
         this.decrementIndex(true);
-        this.dispatcher.end(false);
+        this._dontChangeIndex = true;
+        this.dispatcher.end();
     }
 
     setVolume(volume: number) {
@@ -223,10 +228,11 @@ export class GuildAudioManager {
 
     jump(position: number) {
         if (!this.dispatcher) throw new Error("Nothing is being played");
-        if (position > this._songs.length)
+        if (position < 0 || position > this._songs.length)
             throw new Error("Invalid song index");
         this.index = position;
-        this.dispatcher.end(false);
+        this._dontChangeIndex = true;
+        this.dispatcher.end();
         return true;
     }
 
@@ -251,17 +257,21 @@ export class GuildAudioManager {
         }
 
         this.dispatcher = this.connection.play(song.getStream());
-        this.dispatcher.on("start", () => {
-            this.textChannel.send(`${Emojis.dvd} Playing **${song.title}**.`);
+        this.dispatcher.on("start", async () => {
+            this.lastMessage = await this.textChannel.send(
+                `${Emojis.dvd} Playing **${song.title}**.`
+            );
         });
-        this.dispatcher.on("finish", async (inc: boolean = true) =>
-            this.handleEnd(inc)
-        );
+        this.dispatcher.on("finish", async () => {
+            this.lastMessage?.delete().catch(() => {});
+            if (!this._dontChangeIndex) this.incrementIndex();
+            delete this._dontChangeIndex;
+            this.handleEnd();
+        });
     }
 
-    handleEnd(inc: boolean = true) {
+    handleEnd() {
         if (this.index === null) throw new Error("Nothing is being played");
-        if (inc) this.incrementIndex();
         return this.play(this._songs[this.index]);
     }
 
@@ -281,9 +291,11 @@ export class GuildAudioManager {
     }
 
     cleanup() {
+        try {
+            this.dispatcher?.destroy();
+        } catch (e) {}
         delete this.connection;
         delete this.dispatcher;
-        this.index = null;
         this.clearQueue();
     }
 }

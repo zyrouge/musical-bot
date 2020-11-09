@@ -3,9 +3,9 @@ import { Client, Command } from "../Core";
 import { Emojis, isGuildTextChannel } from "../Utils";
 
 export default class implements Command {
-    name = "skip";
-    aliases = ["sk", "next"];
-    description = "Skip a song";
+    name = "clearqueue";
+    aliases = ["cq", "clear"];
+    description = "Cleares the queue";
 
     constructor() {}
 
@@ -35,8 +35,7 @@ export default class implements Command {
             );
 
         try {
-            queue.shuffle();
-            message.channel.send(`${Emojis.shuffle} Shuffled the queue!`);
+            queue.cleanup();
         } catch (err) {
             message.channel.send(`${Emojis.err} ${err}`);
         }

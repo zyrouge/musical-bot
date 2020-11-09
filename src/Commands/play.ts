@@ -10,9 +10,12 @@ import {
     isGuildTextChannel,
     getTrackParamsFromYtdl,
     getTrackParamsFromYtsr,
-    Emojis
+    Emojis,
+    RegExps,
+    getTrackParamsFromYtplResult
 } from "../Utils";
 import ytsr from "ytsr";
+import ytpl from "ytpl";
 import ytdl from "ytdl-core";
 
 export default class implements Command {
@@ -29,6 +32,11 @@ export default class implements Command {
             !isGuildTextChannel(message.channel)
         )
             return;
+
+        if (!args.length)
+            return message.channel.send(
+                `${Emojis.info} Provide a song name/url to play.`
+            );
 
         const voiceChannel = message.member.voice.channel;
         if (!voiceChannel)
@@ -49,32 +57,64 @@ export default class implements Command {
 
         const search = args.join(" ");
         const msg = await message.channel.send(
-            `${Emojis.info} Searching results for \`${search}\``
+            `${Emojis.info} Searching results for \`${search}\`...`
         );
-        let trackopts: TrackOptions;
-        try {
-            const video = await ytdl.getBasicInfo(args[0]);
-            trackopts = getTrackParamsFromYtdl(video);
-        } catch (e) {
-            const searches = await ytsr(search, {
-                limit: 5
-            });
-            const videos = searches.items.filter((t) => t.type === "video");
-            if (!videos.length || !videos[0])
-                return msg.edit(
-                    `${Emojis.sad} No result found for \`\`${search}\`\`.`
+
+        let trackopts: TrackOptions | TrackOptions[];
+        if (RegExps.playlist.test(search)) {
+            try {
+                const videos = await ytpl(search);
+                msg.edit(
+                    `${Emojis.music} Adding **${videos.items.length} songs** to queue...`
                 );
-            const video = videos[0] as ytsr.Video;
-            const yttrack = await ytdl.getBasicInfo(video.link);
-            trackopts = yttrack
-                ? getTrackParamsFromYtdl(yttrack)
-                : getTrackParamsFromYtsr(video);
+                const songs = getTrackParamsFromYtplResult(videos);
+                trackopts = songs;
+            } catch (err) {
+                return msg.edit(
+                    `${Emojis.sad} Could not resolve playlist \`${search}\`.`
+                );
+            }
+        } else if (RegExps.youtubeURL.test(search)) {
+            try {
+                const video = await ytdl.getBasicInfo(args[0]);
+                trackopts = getTrackParamsFromYtdl(video);
+            } catch (err) {
+                return msg.edit(
+                    `${Emojis.sad} Could not resolve video \`${search}\`.`
+                );
+            }
+        } else {
+            try {
+                const searches = await ytsr(search, {
+                    limit: 1
+                });
+                const videos = searches.items.filter((t) => t.type === "video");
+                if (!videos.length || !videos[0])
+                    return msg.edit(
+                        `${Emojis.sad} No result found for \`${search}\`.`
+                    );
+                const video = videos[0] as ytsr.Video;
+                trackopts = getTrackParamsFromYtsr(video);
+            } catch (err) {
+                return msg.edit(`${Emojis.sad} No results for \`${search}\`.`);
+            }
         }
 
-        const track = new Track(trackopts, message.author.id);
-        try {
+        if (Array.isArray(trackopts)) {
+            for (const tr of trackopts) {
+                const track = new Track(tr, message.author.id);
+                queue.addTrack(track);
+            }
+            msg.edit(
+                `${Emojis.music} Added **${trackopts.length} songs** to queue!`
+            );
+        } else {
+            const track = new Track(trackopts, message.author.id);
             queue.addTrack(track);
-            msg.edit(`${Emojis.music} Added **${track.title}** to queue`);
+            msg.edit(`${Emojis.music} Added **${track.title}** to queue!`);
+        }
+
+        try {
             if (!queue.playing) await queue.start();
         } catch (err) {
             msg.edit(`${Emojis.err} ${err}`);

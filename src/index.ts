@@ -1,6 +1,7 @@
 import { Client, CommandConstructor } from "./Core";
 import fs, { promises as fsp } from "fs";
 import dotenv from "dotenv";
+import { Emojis } from "./Utils";
 
 dotenv.config({ path: __dirname + "/../.env" });
 if (!process.env.DISCORD_TOKEN) throw new Error("No 'DISCORD_TOKEN' was found");
@@ -15,8 +16,8 @@ const client = new Client({
 });
 
 const init = async () => {
-    for (const command of await fsp.readdir(`${__dirname}/commands`)) {
-        const cmdC: CommandConstructor = require(`${__dirname}/commands/${command}`)
+    for (const command of await fsp.readdir(`${__dirname}/Commands`)) {
+        const cmdC: CommandConstructor = require(`${__dirname}/Commands/${command}`)
             .default;
         const cmd = new cmdC();
         client.commander.labels.set(cmd.name, cmd);
@@ -51,6 +52,32 @@ client.on("message", async (message) => {
         message.channel.send(
             `Something went wrong while executing command "**${command}**"!`
         );
+    }
+});
+
+client.on("voiceStateUpdate", (oldChannel, newChannel) => {
+    if (
+        oldChannel.member &&
+        newChannel.member &&
+        oldChannel.member.id === newChannel.member.id
+    ) {
+        const queue = client.music.get(oldChannel.guild.id);
+        if (queue) {
+            const isEmpty = () =>
+                queue.voiceChannel.members.size === 1 &&
+                queue.voiceChannel.members.first()?.id === client.user?.id;
+
+            if (isEmpty()) {
+                setTimeout(() => {
+                    if (isEmpty()) {
+                        queue.cleanup();
+                        queue.textChannel.send(
+                            `${Emojis.info} Left \`#${queue.voiceChannel.name}\` due to lack of listerners.`
+                        );
+                    }
+                }, 15 * 1000);
+            }
+        }
     }
 });
 

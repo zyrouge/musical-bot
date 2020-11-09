@@ -3,9 +3,9 @@ import { Client, Command } from "../Core";
 import { Emojis, isGuildTextChannel } from "../Utils";
 
 export default class implements Command {
-    name = "skip";
-    aliases = ["sk", "next"];
-    description = "Skip a song";
+    name = "remove";
+    aliases = ["rm"];
+    description = "Remove a song from the queue";
 
     constructor() {}
 
@@ -34,9 +34,19 @@ export default class implements Command {
                 `${Emojis.err} You must be in the same voice channel to use \`${this.name}\` command.`
             );
 
+        if (!args.length)
+            return message.channel.send(
+                `${Emojis.info} Provide a song index to remove.`
+            );
+
+        const pos = parseInt(args[0]);
+        if (isNaN(pos))
+            return message.channel.send(
+                `${Emojis.err} Song index must be a number.`
+            );
+
         try {
-            queue.shuffle();
-            message.channel.send(`${Emojis.shuffle} Shuffled the queue!`);
+            queue.removeTrack(pos - 1);
         } catch (err) {
             message.channel.send(`${Emojis.err} ${err}`);
         }

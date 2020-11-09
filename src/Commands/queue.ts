@@ -9,7 +9,7 @@ export default class implements Command {
 
     constructor() {}
 
-    action(client: Client, message: Message, args: string[]) {
+    async action(client: Client, message: Message, args: string[]) {
         if (
             !message.guild ||
             !message.member ||
@@ -35,19 +35,28 @@ export default class implements Command {
 
         try {
             const songs = queue.songs;
-            const np = queue.index ? queue.songs[queue.index] : null;
+            const np = queue.index !== null ? queue.songs[queue.index] : null;
             const desc: string[] = [];
-            songs.forEach((song, i) => {
+            for (let i = 0; i < songs.length; i++) {
+                const song = songs[i];
                 desc.push(
                     `${i + 1}. **[${song.title}](${song.url})** ${
                         song.durationHuman() || ""
                     }`
                 );
-            });
+            }
             message.channel.send({
                 embed: {
                     title: "Queue",
-                    description: desc.join("\n")
+                    description: desc.join("\n"),
+                    fields: [
+                        {
+                            name: "Now Playing",
+                            value: np
+                                ? `${np.title} [${queue.dispatcher?.streamTime}/]`
+                                : "None"
+                        }
+                    ]
                 }
             });
         } catch (err) {

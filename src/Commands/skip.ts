@@ -4,7 +4,7 @@ import { Emojis, isGuildTextChannel } from "../Utils";
 
 export default class implements Command {
     name = "skip";
-    aliases = ["sk"];
+    aliases = ["sk", "next"];
     description = "Skip a song";
 
     constructor() {}

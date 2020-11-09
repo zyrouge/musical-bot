@@ -1,5 +1,6 @@
 import { DMChannel, NewsChannel, TextChannel } from "discord.js";
 import ytsr from "ytsr";
+import ytpl from "ytpl";
 import ytdl from "ytdl-core";
 import dayjs from "dayjs";
 import dayjsduration from "dayjs/plugin/duration";
@@ -12,6 +13,23 @@ export function isGuildTextChannel(
 ): channel is TextChannel {
     if (!("guild" in channel)) return false;
     return true;
+}
+
+export function getLocaleFromDuration({
+    days,
+    hours,
+    minutes,
+    seconds
+}: dayjsduration.Duration) {
+    const daysN = days();
+    const hoursN = hours();
+    const minuteN = minutes();
+    const secondN = seconds();
+    const day = daysN ? `${daysN}d` : "";
+    const hour = hoursN ? `${hoursN}h` : "";
+    const minute = minuteN ? `${minuteN}m` : "";
+    const second = secondN ? `${secondN}s` : "";
+    return [day, hour, minute, second].map((x) => !!x.length).join(":");
 }
 
 export function getTrackParamsFromYtdl({
@@ -45,6 +63,24 @@ export function getTrackParamsFromYtsr(video: ytsr.Video) {
     return track;
 }
 
+export function getTrackParamsFromYtplResult(videos: ytpl.result) {
+    const tracks: TrackOptions[] = videos.items.map((video) => {
+        const track: TrackOptions = {
+            url: video.url_simple,
+            thumbnail: video.thumbnail,
+            channelName: video.author?.name || "Unknown",
+            channelURL: video.author?.ref || "Unknown",
+            title: video.title
+        };
+        if (video.duration) {
+            const dura = dayjs.duration(video.duration);
+            track.duration = dura.asMilliseconds();
+        }
+        return track;
+    });
+    return tracks;
+}
+
 export const Emojis = {
     music: "🎵",
     bye: "👋",
@@ -56,5 +92,12 @@ export const Emojis = {
     repeat: {
         queue: "🔁",
         song: "🔂"
-    }
+    },
+    shuffle: "🔀",
+    clock: "🕐"
+};
+
+export const RegExps = {
+    youtubeURL: /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/,
+    playlist: /^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/
 };
