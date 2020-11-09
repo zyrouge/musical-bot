@@ -34,7 +34,7 @@ client.on("warn", console.warn);
 client.on("error", console.error);
 
 client.on("message", async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot || !message.guild) return;
     if (message.content.indexOf(client.prefix) !== 0) return;
 
     const args = message.content.slice(client.prefix.length).trim().split(" ");

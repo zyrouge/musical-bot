@@ -13,6 +13,7 @@
     "author": "ZYROUGE",
     "license": "ISC",
     "dependencies": {
+        "@discordjs/opus": "^0.3.3",
         "dayjs": "^1.9.5",
         "discord.js": "^12.4.1",
         "dotenv": "^8.2.0",
@@ -20,7 +21,7 @@
         "genius-lyrics": "^4.0.0",
         "lodash": "^4.17.20",
         "ytdl-core": "^4.0.3",
-        "ytsr": "^1.0.4"
+        "ytsr": "TimeForANinja/node-ytsr#wip-api-adjustments"
     },
     "devDependencies": {
         "@types/lodash": "^4.14.165",

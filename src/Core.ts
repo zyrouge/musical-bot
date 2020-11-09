@@ -8,11 +8,11 @@ import {
     VoiceChannel,
     VoiceConnection
 } from "discord.js";
-import Youtube from "ytsr";
 import ytdl from "ytdl-core";
 import _ from "lodash";
 import dayjs, { Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
+import { Emojis } from "./Utils";
 
 dayjs.extend(duration);
 
@@ -62,11 +62,21 @@ export class Client extends DiscordClient {
     }
 }
 
-class Track {
+export interface TrackOptions {
+    url: string;
+    thumbnail: string;
+    channelName: string;
+    channelURL: string;
+    title: string;
+    uploadedAt?: string;
+    duration?: number;
+}
+
+export class Track {
     title: string;
     url: string;
-    duration?: string;
-    durationTime?: duration.Duration;
+    duration?: number;
+    private durationObj?: duration.Duration;
     thumbnail: string;
     channel: {
         title: string;
@@ -75,49 +85,57 @@ class Track {
     published?: string;
     requester: string;
 
-    constructor(video: Youtube.Video, userID: string) {
-        this.url = video.link;
+    constructor(video: TrackOptions, userID: string) {
+        this.url = video.url;
         this.thumbnail = video.thumbnail;
         this.channel = {
-            title: video.author.name,
-            url: video.author.ref
+            title: video.channelName,
+            url: video.channelURL
         };
         this.title = video.title
             .replace(/\\(\*|_|`|~|\\)/g, "$1")
             .replace(/(\*|_|`|~|\\)/g, "\\$1");
         this.requester = userID;
-        if (video.uploaded_at) this.published = video.uploaded_at;
+        if (video.uploadedAt) this.published = video.uploadedAt;
         if (video.duration) {
             this.duration = video.duration;
-            this.durationTime = dayjs.duration(video.duration);
+            this.durationObj = dayjs.duration(video.duration);
         }
+    }
+
+    durationHuman() {
+        if (!this.durationObj) return undefined;
+        const { days, hours, minutes, seconds } = this.durationObj;
+        const str = (n: any) => (n ? `${n}` : "");
+        return [days, hours, minutes, seconds]
+            .map(str)
+            .filter((s) => !!s)
+            .join(":");
     }
 
     getStream() {
         return ytdl(this.url, {
             filter: "audioonly",
-            quality: "highestaudio"
+            quality: "lowestaudio"
         });
     }
 }
 
-type loop = "queue" | "none" | "track";
+export type loop = "queue" | "none" | "track";
 
-class GuildAudioManager {
+export class GuildAudioManager {
     private _songs: Track[];
-    index: number;
+    index: number | null;
     loop: loop;
-    playing: boolean;
-    connection?: VoiceConnection;
-    dispatcher?: StreamDispatcher;
     textChannel: TextChannel;
     voiceChannel: VoiceChannel;
+    connection?: VoiceConnection;
+    dispatcher?: StreamDispatcher;
 
     constructor(textChannel: TextChannel, voiceChannel: VoiceChannel) {
         this._songs = [];
         this.loop = "none";
-        this.index = 0;
-        this.playing = false;
+        this.index = null;
         this.textChannel = textChannel;
         this.voiceChannel = voiceChannel;
     }
@@ -126,19 +144,26 @@ class GuildAudioManager {
         return [...this._songs];
     }
 
-    // removeTrack(position: number) {
-    //     try {
-    //         // let track = this._songs[position];
-    //         // this._songs.splice(track, 1);
-    //         return true;
-    //     } catch (e) {
-    //         return false;
-    //     }
-    // }
+    get playing() {
+        return this.index !== null;
+    }
+
+    get paused() {
+        return !!(this.dispatcher && this.dispatcher.paused);
+    }
+
+    addTrack(track: Track) {
+        this._songs.push(track);
+    }
+
+    removeTrack(position: number) {
+        if (!this._songs[position]) throw new Error("Invalid song index");
+        this._songs.splice(position, 1);
+    }
 
     clearQueue() {
         this._songs = [];
-        this.index = 0;
+        this.index = null;
     }
 
     setLoop(state: loop) {
@@ -146,20 +171,19 @@ class GuildAudioManager {
     }
 
     nowPlaying() {
+        if (this.index === null) throw new Error("Nothing is being played");
         return this._songs[this.index];
     }
 
     pause() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
         if (this.playing === false) throw new Error("Music is already paused");
-        this.playing = false;
         this.dispatcher.pause();
     }
 
     resume() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
         if (this.playing === true) throw new Error("Music is not paused");
-        this.playing = true;
         this.dispatcher.resume();
     }
 
@@ -174,32 +198,15 @@ class GuildAudioManager {
 
     skip() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
-        this.incrementIndex();
-        this.dispatcher.end();
+        this.incrementIndex(true);
+        this.dispatcher.end(false);
     }
 
-    // previous() {
-    //     const queue = this._queue.get(guild.id);
-    //     let revertLoopToTrack = false;
-    //     if (queue.loop == 2) {
-    //         queue.loop = 0;
-    //         revertLoopToTrack = true;
-    //     }
-    //     queue.songs = this._previousQueueProcess(queue.songs);
-    //     queue.connection.stopPlaying();
-    //     setTimeout(() => {
-    //         if (revertLoopToTrack && this._queue.get(guild.id)) queue.loop = 2;
-    //     }, 1000);
-    //     return true;
-    // }
-
-    // _previousQueueProcess(array) {
-    //     let songs = [];
-    //     array.forEach((song) => songs.push(song));
-    //     const song = songs.pop();
-    //     songs.splice(1, 0, song);
-    //     return songs;
-    // }
+    previous() {
+        if (!this.dispatcher) throw new Error("Nothing is being played");
+        this.decrementIndex(true);
+        this.dispatcher.end(false);
+    }
 
     setVolume(volume: number) {
         if (!this.dispatcher) throw new Error("Nothing is being played");
@@ -207,7 +214,11 @@ class GuildAudioManager {
     }
 
     shuffle() {
-        this._songs = this._songs.sort((a, b) => Math.random() - 0.5);
+        const shuff = (arr: Track[]) => arr.sort((a, b) => Math.random() - 0.5);
+        const currentSongURL = this.nowPlaying().url;
+        this._songs = shuff(this._songs);
+        this._songs = shuff(this._songs);
+        this.index = this._songs.findIndex((t) => t.url === currentSongURL);
     }
 
     jump(position: number) {
@@ -215,14 +226,19 @@ class GuildAudioManager {
         if (position > this._songs.length)
             throw new Error("Invalid song index");
         this.index = position;
-        this.dispatcher.end();
+        this.dispatcher.end(false);
         return true;
+    }
+
+    start() {
+        if (this.index === null) this.index = 0;
+        return this.play(this._songs[this.index]);
     }
 
     async play(song: Track) {
         if (!song) {
-            this.voiceChannel?.leave();
-            this.textChannel?.send(`Music has been Ended.`);
+            this.cleanup();
+            this.textChannel.send(`${Emojis.bye} Music has been Ended.`);
             return;
         }
 
@@ -230,21 +246,44 @@ class GuildAudioManager {
             if (!this.voiceChannel.joinable)
                 throw new Error("Voice channel is not joinable");
             this.connection = await this.voiceChannel.join();
+            this.connection.on("disconnect", () => this.cleanup());
+            this.connection.on("error", console.error);
         }
 
         this.dispatcher = this.connection.play(song.getStream());
-        this.textChannel.send(`${"kek"} | Playing **${song.title}**.`);
-        this.connection.once("end", this.handleEnd);
-        this.connection.on("error", (err) => console.error(err));
+        this.dispatcher.on("start", () => {
+            this.textChannel.send(`${Emojis.dvd} Playing **${song.title}**.`);
+        });
+        this.dispatcher.on("finish", async (inc: boolean = true) =>
+            this.handleEnd(inc)
+        );
     }
 
-    handleEnd() {
-        this.incrementIndex();
+    handleEnd(inc: boolean = true) {
+        if (this.index === null) throw new Error("Nothing is being played");
+        if (inc) this.incrementIndex();
         return this.play(this._songs[this.index]);
     }
 
-    incrementIndex() {
-        if (this.loop === "track") return;
+    incrementIndex(force: boolean = false) {
+        if (this.index === null) throw new Error("Nothing is being played");
+        if (!force && this.loop === "track") return;
+        this.index = this.index + 1;
         if (this.loop === "queue" && !this._songs[this.index]) this.index = 0;
+    }
+
+    decrementIndex(force: boolean = false) {
+        if (this.index === null) throw new Error("Nothing is being played");
+        if (!force && this.loop === "track") return;
+        this.index = this.index - 1;
+        if (this.loop === "queue" && !this._songs[this.index])
+            this.index = this._songs.length - 1;
+    }
+
+    cleanup() {
+        delete this.connection;
+        delete this.dispatcher;
+        this.index = null;
+        this.clearQueue();
     }
 }
