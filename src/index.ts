@@ -8,7 +8,6 @@ if (!process.env.DISCORD_TOKEN) throw new Error("No 'DISCORD_TOKEN' was found");
 const config: { PREFIX: string } = JSON.parse(
     fs.readFileSync(`${__dirname}/../config.json`).toString()
 );
-if (!config.PREFIX) throw new Error("No 'PREFIX' was found");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const client = new Client({
