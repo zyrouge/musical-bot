@@ -12,7 +12,8 @@ import {
     getTrackParamsFromYtsr,
     Emojis,
     RegExps,
-    getTrackParamsFromYtplResult
+    getTrackParamsFromYtplResult,
+    Colors
 } from "../Utils";
 import ytsr from "ytsr";
 
@@ -78,6 +79,7 @@ export default class implements Command {
                     description: tracks
                         .map((x, i) => `${i + 1}. **[${x.title}](${x.url})**`)
                         .join("\n"),
+                    color: Colors.def,
                     footer: {
                         text: "React to select"
                     }

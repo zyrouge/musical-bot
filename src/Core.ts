@@ -107,11 +107,6 @@ export class Track {
         }
     }
 
-    async update() {
-        const info = await ytdl.getBasicInfo(this.url);
-        this._duration(getTrackParamsFromYtdl(info));
-    }
-
     durationHuman() {
         if (!this.durationObj) return undefined;
         return getLocaleFromDuration(this.durationObj);
@@ -242,32 +237,37 @@ export class GuildAudioManager {
     }
 
     async play(song: Track) {
-        if (!song) {
+        try {
+            if (!song) {
+                this.cleanup();
+                this.textChannel.send(`${Emojis.bye} Music has been Ended.`);
+                return;
+            }
+
+            if (!this.connection) {
+                if (!this.voiceChannel.joinable)
+                    throw new Error("Voice channel is not joinable");
+                this.connection = await this.voiceChannel.join();
+                this.connection.on("disconnect", () => this.cleanup());
+                this.connection.on("error", console.error);
+            }
+
+            this.dispatcher = this.connection.play(song.getStream());
+            this.dispatcher.on("start", async () => {
+                this.lastMessage = await this.textChannel.send(
+                    `${Emojis.dvd} Playing **${song.title}**.`
+                );
+            });
+            this.dispatcher.on("finish", async () => {
+                this.lastMessage?.delete().catch(() => {});
+                if (!this._dontChangeIndex) this.incrementIndex();
+                delete this._dontChangeIndex;
+                this.handleEnd();
+            });
+        } catch (err) {
             this.cleanup();
-            this.textChannel.send(`${Emojis.bye} Music has been Ended.`);
-            return;
+            throw err;
         }
-
-        if (!this.connection) {
-            if (!this.voiceChannel.joinable)
-                throw new Error("Voice channel is not joinable");
-            this.connection = await this.voiceChannel.join();
-            this.connection.on("disconnect", () => this.cleanup());
-            this.connection.on("error", console.error);
-        }
-
-        this.dispatcher = this.connection.play(song.getStream());
-        this.dispatcher.on("start", async () => {
-            this.lastMessage = await this.textChannel.send(
-                `${Emojis.dvd} Playing **${song.title}**.`
-            );
-        });
-        this.dispatcher.on("finish", async () => {
-            this.lastMessage?.delete().catch(() => {});
-            if (!this._dontChangeIndex) this.incrementIndex();
-            delete this._dontChangeIndex;
-            this.handleEnd();
-        });
     }
 
     handleEnd() {

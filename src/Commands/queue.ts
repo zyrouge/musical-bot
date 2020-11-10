@@ -1,6 +1,6 @@
 import { Message, MessageEmbed } from "discord.js";
 import { Client, Command } from "../Core";
-import { Emojis, isGuildTextChannel } from "../Utils";
+import { Colors, Emojis, isGuildTextChannel } from "../Utils";
 
 export default class implements Command {
     name = "queue";
@@ -35,28 +35,25 @@ export default class implements Command {
 
         try {
             const songs = queue.songs;
-            const np = queue.index !== null ? queue.songs[queue.index] : null;
+            const np =
+                queue.index !== null ? queue.songs[queue.index] : undefined;
             const desc: string[] = [];
             for (let i = 0; i < songs.length; i++) {
                 const song = songs[i];
-                desc.push(
-                    `${i + 1}. **[${song.title}](${song.url})** ${
-                        song.durationHuman() || ""
-                    }`
-                );
+                const fields: string[] = [
+                    `${i + 1}.`,
+                    `**[${song.title}](${song.url})**`
+                ];
+                const dur = song.durationHuman();
+                if (dur) fields.push(`(${dur})`);
+                if (song.url === np?.url) fields.splice(1, 0, Emojis.music2);
+                desc.push(fields.join(" "));
             }
             message.channel.send({
                 embed: {
                     title: "Queue",
                     description: desc.join("\n"),
-                    fields: [
-                        {
-                            name: "Now Playing",
-                            value: np
-                                ? `${np.title} [${queue.dispatcher?.streamTime}/]`
-                                : "None"
-                        }
-                    ]
+                    color: Colors.def
                 }
             });
         } catch (err) {

@@ -83,6 +83,7 @@ export function getTrackParamsFromYtplResult(videos: ytpl.result) {
 
 export const Emojis = {
     music: "🎵",
+    music2: "🎶",
     bye: "👋",
     dvd: "📀",
     success: "👌",
@@ -95,6 +96,10 @@ export const Emojis = {
     },
     shuffle: "🔀",
     clock: "🕐"
+};
+
+export const Colors = {
+    def: 0xe642f5
 };
 
 export const RegExps = {

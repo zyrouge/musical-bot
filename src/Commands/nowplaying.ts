@@ -1,6 +1,11 @@
 import { Message } from "discord.js";
 import { Client, Command } from "../Core";
-import { Emojis, getLocaleFromDuration, isGuildTextChannel } from "../Utils";
+import {
+    Colors,
+    Emojis,
+    getLocaleFromDuration,
+    isGuildTextChannel
+} from "../Utils";
 import dayjs from "dayjs";
 import dayjsduration from "dayjs/plugin/duration";
 
@@ -42,20 +47,25 @@ export default class implements Command {
                 channel,
                 thumbnail,
                 durationHuman,
-                requester,
-                update
+                requester
             } = queue.nowPlaying();
-            await update();
-            const passed = queue.dispatcher?.streamTime || 0;
-            const emote = "🔘";
-            const barele = "─".repeat(19).split("");
-            const index = Math.floor((passed / (duration || 0)) * 20);
-            const bar = barele.splice(index, 0, emote);
-            const current = getLocaleFromDuration(dayjs.duration(passed));
+            let footerText: string | undefined;
+            if (duration && queue.dispatcher?.streamTime) {
+                const passed = queue.dispatcher.streamTime;
+                const emote = "🔘";
+                const barele = "─".repeat(19).split("");
+                const index = Math.floor((passed / duration) * 20);
+                const bar = barele.splice(index, 0, emote);
+                const current = getLocaleFromDuration(dayjs.duration(passed));
+                footerText = `${current}/${
+                    durationHuman() || "Unknown"
+                } ${bar}`;
+            }
             message.channel.send({
                 embed: {
                     title: `Now playing: ${title}`,
                     url: url,
+                    color: Colors.def,
                     description: [
                         `Position: **${(queue.index || 0) + 1}/${
                             queue.songs.length
@@ -68,9 +78,7 @@ export default class implements Command {
                         url: thumbnail
                     },
                     footer: {
-                        text: `${current}/${
-                            durationHuman() || "Unknown"
-                        } ${bar}`
+                        text: footerText || "Unknown duration"
                     }
                 }
             });

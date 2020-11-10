@@ -1,7 +1,7 @@
 import { Message } from "discord.js";
 import { Client, Command } from "../Core";
 import genius from "genius-lyrics";
-import { Emojis } from "../Utils";
+import { Colors, Emojis } from "../Utils";
 
 const Genius = new genius.Client();
 export default class implements Command {
@@ -43,6 +43,7 @@ export default class implements Command {
                                 icon_url: song.artist?.image
                             },
                             url: song.url,
+                            color: Colors.def,
                             description: part,
                             thumbnail: {
                                 url: song.thumbnail
