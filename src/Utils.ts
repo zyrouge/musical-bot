@@ -86,6 +86,8 @@ export const Emojis = {
     music2: "🎶",
     bye: "👋",
     dvd: "📀",
+    tick: "✔️",
+    cross: "❌",
     success: "👌",
     err: "⛔",
     sad: "🙁",
@@ -95,11 +97,35 @@ export const Emojis = {
         song: "🔂"
     },
     shuffle: "🔀",
-    clock: "🕐"
+    search: "🔍",
+    clock: "🕐",
+    speaker: "🔊"
 };
 
 export const Colors = {
     def: 0xe642f5
+};
+
+// https://github.com/Androz2091/discord-player/blob/5e3075dad1b4617a21d99379438f221582a0c130/src/Player.js#L35
+export const SongFilters = {
+    bassboost: "bass=g=20,dynaudnorm=g=101",
+    "8D": "apulsator=hz=0.08",
+    vaporwave: "aresample=48000,asetrate=48000*0.8",
+    nightcore: "aresample=48000,asetrate=48000*1.25",
+    phaser: "aphaser=in_gain=0.4",
+    tremolo: "tremolo",
+    vibrato: "vibrato=f=6.5",
+    reverse: "areverse",
+    treble: "treble=g=5",
+    normalizer: "dynaudnorm=f=200",
+    surrounding: "surround",
+    pulsator: "apulsator=hz=1",
+    subboost: "asubboost",
+    karaoke: "stereotools=mlev=0.03",
+    flanger: "flanger",
+    gate: "agate",
+    haas: "haas",
+    mcompand: "mcompand"
 };
 
 export const RegExps = {

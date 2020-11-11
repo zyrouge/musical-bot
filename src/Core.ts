@@ -9,10 +9,13 @@ import {
     VoiceConnection
 } from "discord.js";
 import ytdl from "ytdl-core";
-import _ from "lodash";
+import ffmpeg from "fluent-ffmpeg";
+import { PassThrough } from "stream";
+import { FFmpeg, opus as Opus } from "prism-media";
+import _, { isUndefined } from "lodash";
 import dayjs, { Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Emojis, getLocaleFromDuration, getTrackParamsFromYtdl } from "./Utils";
+import { Emojis, getLocaleFromDuration, SongFilters } from "./Utils";
 
 dayjs.extend(duration);
 
@@ -114,13 +117,14 @@ export class Track {
 
     getStream() {
         return ytdl(this.url, {
-            filter: "audioonly",
-            quality: "lowestaudio"
+            quality: "highestaudio",
+            highWaterMark: 1 << 25
         });
     }
 }
 
 export type loop = "queue" | "none" | "track";
+export type filter = keyof typeof SongFilters;
 
 export class GuildAudioManager {
     private _songs: Track[];
@@ -130,7 +134,10 @@ export class GuildAudioManager {
     voiceChannel: VoiceChannel;
     connection?: VoiceConnection;
     dispatcher?: StreamDispatcher;
+    filters: Set<filter>;
+    volume: number;
     private _dontChangeIndex?: boolean;
+    private _seekMs?: number;
     private lastMessage?: Message;
 
     constructor(textChannel: TextChannel, voiceChannel: VoiceChannel) {
@@ -139,6 +146,8 @@ export class GuildAudioManager {
         this.index = null;
         this.textChannel = textChannel;
         this.voiceChannel = voiceChannel;
+        this.filters = new Set();
+        this.volume = 150;
     }
 
     get songs() {
@@ -154,6 +163,8 @@ export class GuildAudioManager {
     }
 
     addTrack(track: Track) {
+        const exist = this._songs.findIndex((t) => t.url === track.url) >= 0;
+        if (exist) throw new Error("Already in queue");
         this._songs.push(track);
     }
 
@@ -176,6 +187,11 @@ export class GuildAudioManager {
         return this._songs[this.index];
     }
 
+    streamTime() {
+        if (!this.dispatcher) throw new Error("Nothing is being played");
+        return this.dispatcher.streamTime + (this._seekMs || 0);
+    }
+
     pause() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
         if (this.playing === false) throw new Error("Music is already paused");
@@ -192,6 +208,7 @@ export class GuildAudioManager {
         if (!this.connection || !this.dispatcher)
             throw new Error("Nothing is being played");
         this.cleanup();
+        this.textChannel.send(`${Emojis.bye} Music has been ended.`);
     }
 
     skip() {
@@ -210,7 +227,10 @@ export class GuildAudioManager {
 
     setVolume(volume: number) {
         if (!this.dispatcher) throw new Error("Nothing is being played");
-        this.dispatcher.setVolume(volume / 100);
+        if (volume < 0 || volume > 200)
+            throw new Error("Volume must be between 0-200");
+        this.volume = volume;
+        this.dispatcher.setVolumeLogarithmic(this.volume / 200);
     }
 
     shuffle() {
@@ -231,6 +251,22 @@ export class GuildAudioManager {
         return true;
     }
 
+    addFilters(filters: filter[]) {
+        filters.forEach((f) => this.filters.add(f));
+    }
+
+    removeFilters(filters: filter[]) {
+        filters.forEach((f) => this.filters.delete(f));
+    }
+
+    allFilters() {
+        return [...this.filters.values()];
+    }
+
+    getFilters() {
+        return this.allFilters().map((f) => SongFilters[f]);
+    }
+
     start() {
         if (this.index === null) this.index = 0;
         return this.play(this._songs[this.index]);
@@ -240,7 +276,9 @@ export class GuildAudioManager {
         try {
             if (!song) {
                 this.cleanup();
-                this.textChannel.send(`${Emojis.bye} Music has been Ended.`);
+                this.textChannel.send(
+                    `${Emojis.bye} No more songs are on queue, goodbye!`
+                );
                 return;
             }
 
@@ -252,22 +290,62 @@ export class GuildAudioManager {
                 this.connection.on("error", console.error);
             }
 
-            this.dispatcher = this.connection.play(song.getStream());
+            const seek = !isUndefined(this._seekMs) ? this._seekMs / 1000 : 0;
+
+            const stream = this.createStream(song);
+            this.dispatcher = this.connection.play(stream, {
+                seek: seek,
+                bitrate: "auto",
+                volume: this.volume / 200
+            });
+            delete this._seekMs;
+
             this.dispatcher.on("start", async () => {
                 this.lastMessage = await this.textChannel.send(
                     `${Emojis.dvd} Playing **${song.title}**.`
                 );
             });
+
             this.dispatcher.on("finish", async () => {
                 this.lastMessage?.delete().catch(() => {});
                 if (!this._dontChangeIndex) this.incrementIndex();
                 delete this._dontChangeIndex;
                 this.handleEnd();
             });
+
+            this.dispatcher.on("error", console.error);
         } catch (err) {
             this.cleanup();
             throw err;
         }
+    }
+
+    async refreshStream() {
+        if (!this.connection || !this.dispatcher || !this.playing)
+            throw new Error("Nothing is being played");
+        this._seekMs = this.dispatcher.streamTime;
+        this._dontChangeIndex = true;
+        this.dispatcher.end();
+    }
+
+    createStream(song: Track) {
+        const baseStream = song.getStream();
+        const outputStream = new PassThrough();
+        const command = ffmpeg(baseStream)
+            .audioCodec("libmp3lame")
+            .noVideo()
+            .audioBitrate(128)
+            .format("mp3");
+        const filters = this.getFilters();
+        if (filters.length) command.outputOption(`-af ${filters.join(",")}`);
+        command.pipe(outputStream, { end: true });
+
+        outputStream.on("close", () => {
+            baseStream.destroy();
+            outputStream.destroy();
+        });
+
+        return outputStream;
     }
 
     handleEnd() {

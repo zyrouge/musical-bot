@@ -41,17 +41,16 @@ export default class implements Command {
             for (let i = 0; i < songs.length; i++) {
                 const song = songs[i];
                 const fields: string[] = [
-                    `${i + 1}.`,
+                    song.url === np?.url ? Emojis.speaker : `${i + 1}.`,
                     `**[${song.title}](${song.url})**`
                 ];
                 const dur = song.durationHuman();
                 if (dur) fields.push(`(${dur})`);
-                if (song.url === np?.url) fields.splice(1, 0, Emojis.music2);
                 desc.push(fields.join(" "));
             }
             message.channel.send({
                 embed: {
-                    title: "Queue",
+                    title: `${Emojis.music} Queue`,
                     description: desc.join("\n"),
                     color: Colors.def
                 }

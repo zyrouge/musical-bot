@@ -1,4 +1,5 @@
 {
     "PREFIX": "&",
-    "PORT": 3000
+    "PORT": 3000,
+    "COOLDOWN": 5000
 }

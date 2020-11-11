@@ -1,3 +1,5 @@
 {
-    "PREFIX": "&"
+    "PREFIX": "&",
+    "PORT": 3000,
+    "COOLDOWN": 5000
 }

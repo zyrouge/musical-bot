@@ -2,11 +2,13 @@ import { Client, CommandConstructor } from "./Core";
 import fs, { promises as fsp } from "fs";
 import dotenv from "dotenv";
 import { Emojis } from "./Utils";
+import { Collection } from "discord.js";
+import Server from "./Server";
 
 dotenv.config({ path: __dirname + "/../.env" });
 if (!process.env.DISCORD_TOKEN) throw new Error("No 'DISCORD_TOKEN' was found");
 
-const config: { PREFIX: string } = JSON.parse(
+const config: { PREFIX: string; PORT: number; COOLDOWN?: number } = JSON.parse(
     fs.readFileSync(`${__dirname}/../config.json`).toString()
 );
 
@@ -34,6 +36,12 @@ client.on("ready", () => {
 client.on("warn", console.warn);
 client.on("error", console.error);
 
+const GlobalCooldown: Collection<
+    string,
+    Collection<string, number>
+> = new Collection();
+const CooldownTime = config.COOLDOWN || 3000;
+
 client.on("message", async (message) => {
     if (message.author.bot || !message.guild) return;
     if (message.content.indexOf(client.prefix) !== 0) return;
@@ -45,9 +53,34 @@ client.on("message", async (message) => {
     let command = client.commander.resolve(cmd);
     if (!command) return;
 
+    const guildID = message.guild.id;
+    const userID = message.author.id;
+    const CooledUsers = GlobalCooldown.get(guildID) || new Collection();
+    const UserCooldown = CooledUsers.get(userID);
+    if (UserCooldown)
+        return message.channel
+            .send(
+                `${Emojis.sad} Try using commands after \`${Math.floor(
+                    (UserCooldown - Date.now()) / 1000
+                )}s\``
+            )
+            .then((msg) =>
+                msg.deletable ? msg.delete({ timeout: 2000 }) : null
+            );
+
+    CooledUsers.set(userID, Date.now() + CooldownTime);
+    GlobalCooldown.set(guildID, CooledUsers);
+    const removeCooldown = () => {
+        const newCooledUsers = GlobalCooldown.get(guildID) || new Collection();
+        newCooledUsers.delete(userID);
+        GlobalCooldown.set(guildID, newCooledUsers);
+    };
+
     try {
         command.action(client, message, args);
+        setTimeout(removeCooldown, CooldownTime);
     } catch (e) {
+        removeCooldown();
         console.error(e);
         message.channel.send(
             `Something went wrong while executing command "**${command}**"!`
@@ -81,4 +114,7 @@ client.on("voiceStateUpdate", (oldChannel, newChannel) => {
     }
 });
 
-init().then(() => client.login(TOKEN));
+init().then(() => {
+    client.login(TOKEN);
+    Server(client, config.PORT);
+});

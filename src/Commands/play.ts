@@ -101,16 +101,27 @@ export default class implements Command {
         }
 
         if (Array.isArray(trackopts)) {
+            let duplicates = 0;
             for (const tr of trackopts) {
                 const track = new Track(tr, message.author.id);
-                queue.addTrack(track);
+                try {
+                    queue.addTrack(track);
+                } catch (err) {
+                    duplicates += 1;
+                }
             }
             msg.edit(
-                `${Emojis.music} Added **${trackopts.length} songs** to queue!`
+                `${Emojis.music} Added **${
+                    trackopts.length - duplicates
+                } songs** to queue! (${duplicates} duplicates were removed)`
             );
         } else {
             const track = new Track(trackopts, message.author.id);
-            queue.addTrack(track);
+            try {
+                queue.addTrack(track);
+            } catch (err) {
+                return msg.edit(`${Emojis.err} ${err}`);
+            }
             msg.edit(`${Emojis.music} Added **${track.title}** to queue!`);
         }
 

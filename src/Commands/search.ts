@@ -75,7 +75,7 @@ export default class implements Command {
             await msg.edit({
                 content: "",
                 embed: {
-                    title: `Results for ${search}`,
+                    title: `${Emojis.search} Results for ${search}`,
                     description: tracks
                         .map((x, i) => `${i + 1}. **[${x.title}](${x.url})**`)
                         .join("\n"),

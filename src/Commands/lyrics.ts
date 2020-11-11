@@ -36,7 +36,7 @@ export default class implements Command {
                 setTimeout(() => {
                     message.channel.send({
                         embed: {
-                            title: song.title,
+                            title: `${Emojis.music} ${song.title}`,
                             author: {
                                 name: song.artist?.name,
                                 url: song.artist?.url,

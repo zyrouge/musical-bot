@@ -50,8 +50,9 @@ export default class implements Command {
                 requester
             } = queue.nowPlaying();
             let footerText: string | undefined;
-            if (duration && queue.dispatcher?.streamTime) {
-                const passed = queue.dispatcher.streamTime;
+            const streamTime = queue.streamTime();
+            if (duration) {
+                const passed = streamTime;
                 const emote = "🔘";
                 const barele = "─".repeat(19).split("");
                 const index = Math.floor((passed / duration) * 20);
@@ -60,10 +61,14 @@ export default class implements Command {
                 footerText = `${current}/${
                     durationHuman() || "Unknown"
                 } ${bar}`;
+            } else {
+                footerText = `${getLocaleFromDuration(
+                    dayjs.duration(streamTime)
+                )}/Unknown`;
             }
             message.channel.send({
                 embed: {
-                    title: `Now playing: ${title}`,
+                    title: `${Emojis.music2} Now playing: ${title}`,
                     url: url,
                     color: Colors.def,
                     description: [
@@ -78,7 +83,7 @@ export default class implements Command {
                         url: thumbnail
                     },
                     footer: {
-                        text: footerText || "Unknown duration"
+                        text: footerText
                     }
                 }
             });
