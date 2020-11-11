@@ -187,13 +187,13 @@ export class GuildAudioManager {
 
     pause() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
-        if (this.playing === false) throw new Error("Music is already paused");
+        if (this.dispatcher.paused) throw new Error("Music is already paused");
         this.dispatcher.pause();
     }
 
     resume() {
         if (!this.dispatcher) throw new Error("Nothing is being played");
-        if (this.playing === true) throw new Error("Music is not paused");
+        if (!this.dispatcher.paused) throw new Error("Music is not paused");
         this.dispatcher.resume();
     }
 

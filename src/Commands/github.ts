@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
 import { Client, Command } from "../Core";
-import { Emojis } from "../Utils";
+import { Colors, Emojis } from "../Utils";
 
 export default class implements Command {
     name = "github";
@@ -23,9 +23,10 @@ export default class implements Command {
                     },
                     {
                         name: "Instructions",
-                        value: `[README](${url}/blob/main/README.md)`
+                        value: `[README.md](${url}/blob/main/README.md)`
                     }
-                ]
+                ],
+                color: Colors.def
             }
         });
     }
