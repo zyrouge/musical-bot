@@ -15,21 +15,16 @@ export function isGuildTextChannel(
     return true;
 }
 
-export function getLocaleFromDuration({
-    days,
-    hours,
-    minutes,
-    seconds
-}: dayjsduration.Duration) {
-    const daysN = days();
-    const hoursN = hours();
-    const minuteN = minutes();
-    const secondN = seconds();
+export function getLocaleFromDuration(dura: dayjsduration.Duration) {
+    const daysN = dura.days();
+    const hoursN = dura.hours();
+    const minuteN = dura.minutes();
+    const secondN = dura.seconds();
     const day = daysN ? `${daysN}d` : "";
     const hour = hoursN ? `${hoursN}h` : "";
     const minute = minuteN ? `${minuteN}m` : "";
     const second = secondN ? `${secondN}s` : "";
-    return [day, hour, minute, second].map((x) => !!x.length).join(":");
+    return [day, hour, minute, second].filter((x) => !!x.length).join(":");
 }
 
 export function getTrackParamsFromYtdl({
