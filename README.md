@@ -27,6 +27,21 @@ OWNER_ID=your_id
 PORT=server_port
 ```
 
+## 🏃 Running the bot
+
+#### Compililing typescript & Running it
+
+```
+npm run build
+npm start
+```
+
+#### Running it using `ts-node` (for development purposes)
+
+```
+npm run dev
+```
+
 ## Resources
 
 -   [Discord Server](https://zyrouge.gq/discord)
