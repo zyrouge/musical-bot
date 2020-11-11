@@ -15,7 +15,7 @@ export default class implements Command {
                 title: `${Emojis.info} All commands`,
                 description: commands
                     .map((c) => `\`${c.name}\` - ${c.description}`)
-                    .join(" "),
+                    .join("\n"),
                 color: Colors.def
             }
         });
