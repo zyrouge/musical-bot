@@ -110,11 +110,6 @@ export class Track {
         }
     }
 
-    durationHuman() {
-        if (!this.durationObj) return undefined;
-        return getLocaleFromDuration(this.durationObj);
-    }
-
     getStream() {
         return ytdl(this.url, {
             quality: "highestaudio",

@@ -1,6 +1,15 @@
 import { Message, MessageEmbed } from "discord.js";
 import { Client, Command } from "../Core";
-import { Colors, Emojis, isGuildTextChannel } from "../Utils";
+import {
+    Colors,
+    Emojis,
+    getLocaleFromDuration,
+    isGuildTextChannel
+} from "../Utils";
+import dayjs from "dayjs";
+import dayjsduration from "dayjs/plugin/duration";
+
+dayjs.extend(dayjsduration);
 
 export default class implements Command {
     name = "queue";
@@ -44,7 +53,9 @@ export default class implements Command {
                     song.url === np?.url ? Emojis.speaker : `${i + 1}.`,
                     `**[${song.title}](${song.url})**`
                 ];
-                const dur = song.durationHuman();
+                const dur = song.duration
+                    ? getLocaleFromDuration(dayjs.duration(song.duration))
+                    : undefined;
                 if (dur) fields.push(`(${dur})`);
                 desc.push(fields.join(" "));
             }

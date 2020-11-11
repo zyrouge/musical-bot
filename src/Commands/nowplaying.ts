@@ -46,7 +46,6 @@ export default class implements Command {
                 duration,
                 channel,
                 thumbnail,
-                durationHuman,
                 requester
             } = queue.nowPlaying();
             let footerText: string | undefined;
@@ -58,9 +57,8 @@ export default class implements Command {
                 const index = Math.floor((passed / duration) * 20);
                 const bar = barele.splice(index, 0, emote);
                 const current = getLocaleFromDuration(dayjs.duration(passed));
-                footerText = `${current}/${
-                    durationHuman() || "Unknown"
-                } ${bar}`;
+                const total = getLocaleFromDuration(dayjs.duration(duration));
+                footerText = `${current}/${total} ${bar}`;
             } else {
                 footerText = `${getLocaleFromDuration(
                     dayjs.duration(streamTime)
