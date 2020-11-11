@@ -69,7 +69,7 @@ export default class implements Command {
                     title: `${Emojis.music} Queue`,
                     description: desc.join("\n"),
                     color: Colors.def,
-                    footer: { text: `Page ${page + 1}/${pages.lengh}` }
+                    footer: { text: `Page ${page + 1}/${parts.length}` }
                 }
             });
         } catch (err) {
