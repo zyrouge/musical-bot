@@ -47,13 +47,14 @@ export default class implements Command {
             const songs = queue.songs;
             const np =
                 queue.index !== null ? queue.songs[queue.index] : undefined;
-            const parts = _.chunk(songs);
+            const parts = _.chunk(songs, 5);
             const pagesongs = parts[page];
             const desc: string[] = [];
+            const iAdd = page * 5;
             for (let i = 0; i < pagesongs.length; i++) {
                 const song = pagesongs[i];
                 const fields: string[] = [
-                    song.url === np?.url ? Emojis.speaker : `${i + 1}.`,
+                    song.url === np?.url ? Emojis.speaker : `${i + 1 + iAdd}.`,
                     `**[${song.title}](${song.url})**`
                 ];
                 const dur = song.duration
@@ -67,7 +68,8 @@ export default class implements Command {
                 embed: {
                     title: `${Emojis.music} Queue`,
                     description: desc.join("\n"),
-                    color: Colors.def
+                    color: Colors.def,
+                    footer: { text: `Page ${page + 1}/${pages.lengh}` }
                 }
             });
         } catch (err) {
