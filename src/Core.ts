@@ -79,7 +79,6 @@ export class Track {
     title: string;
     url: string;
     duration?: number;
-    private durationObj?: duration.Duration;
     thumbnail: string;
     channel: {
         title: string;
@@ -106,7 +105,6 @@ export class Track {
         if (video.uploadedAt) this.published = video.uploadedAt;
         if (video.duration) {
             this.duration = video.duration;
-            this.durationObj = dayjs.duration(video.duration);
         }
     }
 
@@ -336,8 +334,9 @@ export class GuildAudioManager {
         command.pipe(outputStream, { end: true });
 
         outputStream.on("close", () => {
-            baseStream.destroy();
-            outputStream.destroy();
+            if (!baseStream.destroyed) baseStream.destroy();
+            if (!outputStream.destroyed) outputStream.destroy();
+            command.kill("SIGSTOP");
         });
 
         return outputStream;
