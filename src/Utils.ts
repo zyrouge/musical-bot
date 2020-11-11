@@ -94,7 +94,9 @@ export const Emojis = {
     shuffle: "🔀",
     search: "🔍",
     clock: "🕐",
-    speaker: "🔊"
+    speaker: "🔊",
+    pause: "⏸️",
+    play: "▶️"
 };
 
 export const Colors = {

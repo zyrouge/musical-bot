@@ -36,6 +36,7 @@ export default class implements Command {
 
         try {
             queue.pause();
+            message.react(Emojis.pause).catch(() => {});
         } catch (err) {
             message.channel.send(`${Emojis.err} ${err}`);
         }
