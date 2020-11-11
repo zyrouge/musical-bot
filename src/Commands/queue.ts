@@ -48,7 +48,7 @@ export default class implements Command {
             const np =
                 queue.index !== null ? queue.songs[queue.index] : undefined;
             const parts = _.chunk(songs, 5);
-            const pagesongs = parts[page];
+            const pagesongs = parts[page] || [];
             const desc: string[] = [];
             const iAdd = page * 5;
             for (let i = 0; i < pagesongs.length; i++) {
