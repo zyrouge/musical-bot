@@ -47,7 +47,8 @@ export default class implements Command {
             const np =
                 queue.index !== null ? queue.songs[queue.index] : undefined;
             const desc: string[] = [];
-            for (let i = 0; i < songs.length; i++) {
+            const index = page * 5;
+            for (let i = index; i < index + 5; i++) {
                 const song = songs[i];
                 const fields: string[] = [
                     song.url === np?.url ? Emojis.speaker : `${i + 1}.`,
@@ -59,6 +60,7 @@ export default class implements Command {
                 if (dur) fields.push(`(${dur})`);
                 desc.push(fields.join(" "));
             }
+            if (!desc.length) desc.push(`Empty as always`);
             message.channel.send({
                 embed: {
                     title: `${Emojis.music} Queue`,
