@@ -15,11 +15,8 @@ import _, { isUndefined } from "lodash";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { Emojis, SongFilters } from "./Utils";
-import Util from "util";
 
 dayjs.extend(duration);
-
-const sleep = Util.promisify(setTimeout);
 
 export interface Command {
     name: string;
@@ -344,9 +341,8 @@ export class GuildAudioManager {
         return outputStream;
     }
 
-    async handleEnd() {
+    handleEnd() {
         if (this.index === null) throw new Error("Nothing is being played");
-        await sleep(2000);
         return this.play(this._songs[this.index]);
     }
 

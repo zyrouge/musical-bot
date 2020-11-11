@@ -1,4 +1,4 @@
-import { Message, MessageEmbed } from "discord.js";
+import { Message } from "discord.js";
 import { Client, Command } from "../Core";
 import {
     Colors,
@@ -7,6 +7,7 @@ import {
     isGuildTextChannel
 } from "../Utils";
 import dayjs from "dayjs";
+import _ from "lodash";
 import dayjsduration from "dayjs/plugin/duration";
 
 dayjs.extend(dayjsduration);
@@ -46,10 +47,11 @@ export default class implements Command {
             const songs = queue.songs;
             const np =
                 queue.index !== null ? queue.songs[queue.index] : undefined;
+            const parts = _.chunk(songs);
+            const pagesongs = parts[page];
             const desc: string[] = [];
-            const index = page * 5;
-            for (let i = index; i < index + 5; i++) {
-                const song = songs[i];
+            for (let i = 0; i < pagesongs.length; i++) {
+                const song = pagesongs[i];
                 const fields: string[] = [
                     song.url === np?.url ? Emojis.speaker : `${i + 1}.`,
                     `**[${song.title}](${song.url})**`
