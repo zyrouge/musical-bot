@@ -2,7 +2,7 @@
     "name": "musical",
     "private": true,
     "version": "1.0.0",
-    "description": "",
+    "description": "A simple music bot made using Discord.js",
     "main": "dist/index.js",
     "scripts": {
         "prestart": "npm run build",
