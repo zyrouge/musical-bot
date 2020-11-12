@@ -88,17 +88,34 @@ client.on("message", async (message) => {
     }
 });
 
-client.on("voiceStateUpdate", (oldChannel, newChannel) => {
+client.on("voiceStateUpdate", (oldState, newState) => {
     if (
-        oldChannel.member &&
-        newChannel.member &&
-        oldChannel.member.id === newChannel.member.id
+        oldState.member &&
+        newState.member &&
+        oldState.member.id === newState.member.id
     ) {
-        const queue = client.music.get(oldChannel.guild.id);
+        const queue = client.music.get(oldState.guild.id);
+
         if (queue) {
             const isEmpty = () =>
                 queue.voiceChannel.members.size === 1 &&
                 queue.voiceChannel.members.first()?.id === client.user?.id;
+
+            if (
+                oldState.channel &&
+                newState.channel &&
+                oldState.member &&
+                newState.member &&
+                client.user &&
+                oldState.member.id === client.user.id &&
+                newState.member.id === client.user.id &&
+                oldState.channel.id !== newState.channel.id
+            ) {
+                queue.voiceChannel = newState.channel;
+                queue.textChannel.send(
+                    `${Emojis.music2} Voice channel has been changed to \`#${queue.voiceChannel.name}\``
+                );
+            }
 
             if (isEmpty()) {
                 setTimeout(() => {
@@ -107,6 +124,7 @@ client.on("voiceStateUpdate", (oldChannel, newChannel) => {
                         queue.textChannel.send(
                             `${Emojis.info} Left \`#${queue.voiceChannel.name}\` due to lack of listerners.`
                         );
+                        queue.voiceChannel.leave();
                     }
                 }, 15 * 1000);
             }
