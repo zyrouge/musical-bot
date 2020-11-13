@@ -2,6 +2,7 @@ import { DMChannel, NewsChannel, TextChannel } from "discord.js";
 import ytsr from "ytsr";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
+import sc from "soundcloud-scraper";
 import dayjs from "dayjs";
 import dayjsduration from "dayjs/plugin/duration";
 import { TrackOptions } from "./Core";
@@ -37,7 +38,8 @@ export function getTrackParamsFromYtdl({
         channelURL: video.author.channel_url,
         title: video.title,
         uploadedAt: video.uploadDate,
-        duration: parseInt(video.lengthSeconds) * 1000
+        duration: parseInt(video.lengthSeconds) * 1000,
+        type: "youtube"
     };
     return track;
 }
@@ -48,7 +50,8 @@ export function getTrackParamsFromYtsr(video: ytsr.Video) {
         thumbnail: video.thumbnail,
         channelName: video.author.name,
         channelURL: video.author.ref,
-        title: video.title
+        title: video.title,
+        type: "youtube"
     };
     if (video.uploaded_at) track.uploadedAt = video.uploaded_at;
     if (video.duration) {
@@ -58,6 +61,42 @@ export function getTrackParamsFromYtsr(video: ytsr.Video) {
     return track;
 }
 
+export function getTrackParamsFromSoundCloud(video: sc.Song) {
+    const track: TrackOptions = {
+        url: video.url,
+        thumbnail: video.thumbnail,
+        channelName: video.author.name,
+        channelURL: video.author.url,
+        title: video.title,
+        type: "soundcloud"
+    };
+    if (video.publishedTimestamp) track.uploadedAt = video.publishedTimestamp;
+    if (video.duration) {
+        const dura = dayjs.duration(video.duration);
+        track.duration = dura.asMilliseconds();
+    }
+    return track;
+}
+
+export function getTrackParamsFromSoundCloudPlaylist(videos: sc.Playlist) {
+    const tracks: TrackOptions[] = videos.tracks.map((video) => {
+        const track: TrackOptions = {
+            url: video.url,
+            thumbnail: video.artwork_url,
+            channelName: video.author?.name || "Unknown",
+            channelURL: video.author?.profile || "Unknown",
+            title: video.title,
+            type: "soundcloud"
+        };
+        if (video.duration) {
+            const dura = dayjs.duration(video.duration);
+            track.duration = dura.asMilliseconds();
+        }
+        return track;
+    });
+    return tracks;
+}
+
 export function getTrackParamsFromYtplResult(videos: ytpl.result) {
     const tracks: TrackOptions[] = videos.items.map((video) => {
         const track: TrackOptions = {
@@ -65,7 +104,8 @@ export function getTrackParamsFromYtplResult(videos: ytpl.result) {
             thumbnail: video.thumbnail,
             channelName: video.author?.name || "Unknown",
             channelURL: video.author?.ref || "Unknown",
-            title: video.title
+            title: video.title,
+            type: "youtube"
         };
         if (video.duration) {
             const dura = dayjs.duration(video.duration);
@@ -126,6 +166,11 @@ export const SongFilters = {
 };
 
 export const RegExps = {
-    youtubeURL: /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/,
-    playlist: /^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/
+    youtube: {
+        song: /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/,
+        playlist: /^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/
+    },
+    soundcloud: {
+        song: /^https?:\/\/(soundcloud\.com|snd\.sc)\/(.*)$/
+    }
 };

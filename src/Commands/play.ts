@@ -12,11 +12,16 @@ import {
     getTrackParamsFromYtsr,
     Emojis,
     RegExps,
-    getTrackParamsFromYtplResult
+    getTrackParamsFromYtplResult,
+    getTrackParamsFromSoundCloud,
+    getTrackParamsFromSoundCloudPlaylist
 } from "../Utils";
 import ytsr from "ytsr";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
+import soundcloud from "soundcloud-scraper";
+
+const SoundCloud = new soundcloud.Client();
 
 export default class implements Command {
     name = "play";
@@ -61,7 +66,7 @@ export default class implements Command {
         );
 
         let trackopts: TrackOptions | TrackOptions[];
-        if (RegExps.playlist.test(search)) {
+        if (RegExps.youtube.playlist.test(search)) {
             try {
                 const videos = await ytpl(search);
                 msg.edit(
@@ -74,13 +79,36 @@ export default class implements Command {
                     `${Emojis.sad} Could not resolve playlist \`${search}\`.`
                 );
             }
-        } else if (RegExps.youtubeURL.test(search)) {
+        } else if (RegExps.youtube.song.test(search)) {
             try {
                 const video = await ytdl.getBasicInfo(args[0]);
                 trackopts = getTrackParamsFromYtdl(video);
             } catch (err) {
                 return msg.edit(
                     `${Emojis.sad} Could not resolve video \`${search}\`.`
+                );
+            }
+        } else if (RegExps.soundcloud.song.test(search)) {
+            try {
+                const video =
+                    (await SoundCloud.getSongInfo(search).catch(() => {})) ||
+                    undefined;
+                if (video) trackopts = getTrackParamsFromSoundCloud(video);
+                else {
+                    const videos =
+                        (await SoundCloud.getPlaylist(
+                            search
+                        ).catch(() => {})) || undefined;
+                    if (videos)
+                        trackopts = getTrackParamsFromSoundCloudPlaylist(
+                            videos
+                        );
+                    else throw "No result";
+                }
+            } catch (err) {
+                console.error(err);
+                return msg.edit(
+                    `${Emojis.sad} Could not resolve soundcloud song/playlist \`${search}\`.`
                 );
             }
         } else {

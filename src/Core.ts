@@ -9,12 +9,14 @@ import {
     VoiceConnection
 } from "discord.js";
 import ytdl from "ytdl-core";
+import { StreamDownloader as sc } from "soundcloud-scraper";
 import ffmpeg from "fluent-ffmpeg";
 import { PassThrough } from "stream";
 import _, { isUndefined } from "lodash";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { Emojis, SongFilters } from "./Utils";
+import { Readable } from "stream";
 
 dayjs.extend(duration);
 
@@ -64,14 +66,16 @@ export class Client extends DiscordClient {
     }
 }
 
+export type sources = "soundcloud" | "youtube";
 export interface TrackOptions {
     url: string;
     thumbnail: string;
     channelName: string;
     channelURL: string;
     title: string;
-    uploadedAt?: string;
+    uploadedAt?: string | number;
     duration?: number;
+    type: sources;
 }
 
 export class Track {
@@ -83,8 +87,9 @@ export class Track {
         title: string;
         url: string;
     };
-    published?: string;
+    published?: string | number;
     requester: string;
+    type: sources;
 
     constructor(video: TrackOptions, userID: string) {
         this.url = video.url;
@@ -97,21 +102,29 @@ export class Track {
             .replace(/\\(\*|_|`|~|\\)/g, "$1")
             .replace(/(\*|_|`|~|\\)/g, "\\$1");
         this.requester = userID;
+        this.type = video.type;
         this._duration(video);
     }
 
-    private _duration(video: { uploadedAt?: string; duration?: number }) {
+    private _duration(video: {
+        uploadedAt?: string | number;
+        duration?: number;
+    }) {
         if (video.uploadedAt) this.published = video.uploadedAt;
         if (video.duration) {
             this.duration = video.duration;
         }
     }
 
-    getStream() {
-        return ytdl(this.url, {
-            quality: "highestaudio",
-            highWaterMark: 1 << 25
-        });
+    async getStream(): Promise<Readable> {
+        if (this.type === "soundcloud")
+            return await sc.downloadProgressive(this.url);
+        if (this.type === "youtube")
+            return ytdl(this.url, {
+                quality: "highestaudio",
+                highWaterMark: 1 << 25
+            });
+        throw new Error("Invalid track type");
     }
 }
 
@@ -284,7 +297,7 @@ export class GuildAudioManager {
 
             const seek = !isUndefined(this._seekMs) ? this._seekMs / 1000 : 0;
 
-            const stream = this.createStream(song);
+            const stream = await this.createStream(song);
             this.dispatcher = this.connection.play(stream, {
                 seek: seek,
                 bitrate: "auto",
@@ -307,8 +320,9 @@ export class GuildAudioManager {
 
             this.dispatcher.on("error", console.error);
         } catch (err) {
+            console.error(err);
             this.cleanup();
-            throw err;
+            this.textChannel.send("Something went wrong");
         }
     }
 
@@ -320,8 +334,8 @@ export class GuildAudioManager {
         this.dispatcher.end();
     }
 
-    createStream(song: Track) {
-        const baseStream = song.getStream();
+    async createStream(song: Track) {
+        const baseStream = await song.getStream();
         const outputStream = new PassThrough();
         const command = ffmpeg(baseStream)
             .audioCodec("libmp3lame")
