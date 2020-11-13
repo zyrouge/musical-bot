@@ -117,8 +117,7 @@ export class Track {
     }
 
     async getStream(): Promise<Readable> {
-        if (this.type === "soundcloud")
-            return await sc.downloadProgressive(this.url);
+        if (this.type === "soundcloud") return await sc.downloadHLS(this.url);
         if (this.type === "youtube")
             return ytdl(this.url, {
                 quality: "highestaudio",
@@ -295,34 +294,44 @@ export class GuildAudioManager {
                 this.connection.on("error", console.error);
             }
 
-            const seek = !isUndefined(this._seekMs) ? this._seekMs / 1000 : 0;
+            try {
+                const seek = !isUndefined(this._seekMs)
+                    ? this._seekMs / 1000
+                    : 0;
 
-            const stream = await this.createStream(song);
-            this.dispatcher = this.connection.play(stream, {
-                seek: seek,
-                bitrate: "auto",
-                volume: this.volume / 200
-            });
-            delete this._seekMs;
+                const stream = await this.createStream(song);
+                this.dispatcher = this.connection.play(stream, {
+                    seek: seek,
+                    bitrate: "auto",
+                    volume: this.volume / 200
+                });
+                delete this._seekMs;
 
-            this.dispatcher.on("start", async () => {
-                this.lastMessage = await this.textChannel.send(
-                    `${Emojis.dvd} Playing **${song.title}**.`
-                );
-            });
+                this.dispatcher.on("start", async () => {
+                    this.lastMessage = await this.textChannel.send(
+                        `${Emojis.dvd} Playing **${song.title}**.`
+                    );
+                });
 
-            this.dispatcher.on("finish", async () => {
-                this.lastMessage?.delete().catch(() => {});
-                if (!this._dontChangeIndex) this.incrementIndex();
-                delete this._dontChangeIndex;
+                this.dispatcher.on("finish", async () => {
+                    this.lastMessage?.delete().catch(() => {});
+                    if (!this._dontChangeIndex) this.incrementIndex();
+                    delete this._dontChangeIndex;
+                    await this.handleEnd();
+                });
+
+                this.dispatcher.on("error", console.error);
+            } catch (err) {
+                this.incrementIndex(true);
                 await this.handleEnd();
-            });
-
-            this.dispatcher.on("error", console.error);
+                this.textChannel.send(
+                    `${Emojis.sad} Could not play **${song.title}**`
+                );
+            }
         } catch (err) {
             console.error(err);
             this.cleanup();
-            this.textChannel.send("Something went wrong");
+            this.textChannel.send(`Something went wrong\n\`\`\`${err}\`\`\``);
         }
     }
 
