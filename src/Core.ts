@@ -9,7 +9,7 @@ import {
     VoiceConnection
 } from "discord.js";
 import ytdl from "ytdl-core";
-import { StreamDownloader as sc } from "soundcloud-scraper";
+// import { StreamDownloader as sc } from "soundcloud-scraper";
 import ffmpeg from "fluent-ffmpeg";
 import { PassThrough } from "stream";
 import _, { isUndefined } from "lodash";
@@ -117,7 +117,7 @@ export class Track {
     }
 
     async getStream(): Promise<Readable> {
-        if (this.type === "soundcloud") return await sc.downloadHLS(this.url);
+        // if (this.type === "soundcloud") return await sc.downloadHLS(this.url);
         if (this.type === "youtube")
             return ytdl(this.url, {
                 quality: "highestaudio",
@@ -299,7 +299,7 @@ export class GuildAudioManager {
                     ? this._seekMs / 1000
                     : 0;
 
-                const stream = await this.createStream(song);
+                const stream = await song.getStream(); //await this.createStream(song);
                 this.dispatcher = this.connection.play(stream, {
                     seek: seek,
                     bitrate: "auto",

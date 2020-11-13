@@ -27,7 +27,6 @@
         "fluent-ffmpeg": "^2.1.2",
         "genius-lyrics": "^4.0.0",
         "lodash": "^4.17.20",
-        "soundcloud-scraper": "^4.0.0",
         "ytdl-core": "^4.0.3",
         "ytpl": "^1.0.1",
         "ytsr": "github:TimeForANinja/node-ytsr#wip-api-adjustments"

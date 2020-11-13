@@ -12,16 +12,16 @@ import {
     getTrackParamsFromYtsr,
     Emojis,
     RegExps,
-    getTrackParamsFromYtplResult,
-    getTrackParamsFromSoundCloud,
-    getTrackParamsFromSoundCloudPlaylist
+    getTrackParamsFromYtplResult
+    // getTrackParamsFromSoundCloud,
+    // getTrackParamsFromSoundCloudPlaylist
 } from "../Utils";
 import ytsr from "ytsr";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
-import soundcloud from "soundcloud-scraper";
+// import soundcloud from "soundcloud-scraper";
 
-const SoundCloud = new soundcloud.Client();
+// const SoundCloud = new soundcloud.Client();
 
 export default class implements Command {
     name = "play";
@@ -88,29 +88,29 @@ export default class implements Command {
                     `${Emojis.sad} Could not resolve video \`${search}\`.`
                 );
             }
-        } else if (RegExps.soundcloud.song.test(search)) {
-            try {
-                const video =
-                    (await SoundCloud.getSongInfo(search).catch(() => {})) ||
-                    undefined;
-                if (video) trackopts = getTrackParamsFromSoundCloud(video);
-                else {
-                    const videos =
-                        (await SoundCloud.getPlaylist(
-                            search
-                        ).catch(() => {})) || undefined;
-                    if (videos)
-                        trackopts = getTrackParamsFromSoundCloudPlaylist(
-                            videos
-                        );
-                    else throw "No result";
-                }
-            } catch (err) {
-                console.error(err);
-                return msg.edit(
-                    `${Emojis.sad} Could not resolve soundcloud song/playlist \`${search}\`.`
-                );
-            }
+            // } else if (RegExps.soundcloud.song.test(search)) {
+            //     try {
+            //         const video =
+            //             (await SoundCloud.getSongInfo(search).catch(() => {})) ||
+            //             undefined;
+            //         if (video) trackopts = getTrackParamsFromSoundCloud(video);
+            //         else {
+            //             const videos =
+            //                 (await SoundCloud.getPlaylist(
+            //                     search
+            //                 ).catch(() => {})) || undefined;
+            //             if (videos)
+            //                 trackopts = getTrackParamsFromSoundCloudPlaylist(
+            //                     videos
+            //                 );
+            //             else throw "No result";
+            //         }
+            //     } catch (err) {
+            //         console.error(err);
+            //         return msg.edit(
+            //             `${Emojis.sad} Could not resolve soundcloud song/playlist \`${search}\`.`
+            //         );
+            //     }
         } else {
             try {
                 const searches = await ytsr(search, {
