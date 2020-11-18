@@ -32,7 +32,15 @@ const init = async () => {
 
 client.on("ready", () => {
     console.log(`Logged in as ${client.user?.tag || "Unknown"}`);
+    client.user?.setPresence({
+        activity: {
+            name: "Music",
+            type: "PLAYING"
+        },
+        status: "dnd"
+    });
 });
+
 client.on("warn", console.warn);
 client.on("error", console.error);
 
