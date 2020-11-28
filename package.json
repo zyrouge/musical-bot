@@ -27,6 +27,7 @@
         "fluent-ffmpeg": "^2.1.2",
         "genius-lyrics": "^4.0.0",
         "lodash": "^4.17.20",
+        "spotify-url-info": "^2.2.0",
         "youtube-sr": "^2.0.4",
         "ytdl-core": "^4.1.0",
         "ytpl": "^1.0.1"

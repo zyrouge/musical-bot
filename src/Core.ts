@@ -9,7 +9,7 @@ import {
     VoiceConnection
 } from "discord.js";
 import ytdl from "ytdl-core";
-// import { StreamDownloader as sc } from "soundcloud-scraper";
+import ytsr, { Video as ytVideo } from "youtube-sr";
 import ffmpeg from "fluent-ffmpeg";
 import { PassThrough } from "stream";
 import _, { isUndefined } from "lodash";
@@ -66,7 +66,7 @@ export class Client extends DiscordClient {
     }
 }
 
-export type sources = "soundcloud" | "youtube";
+export type sources = "soundcloud" | "youtube" | "spotify";
 export interface TrackOptions {
     url: string;
     thumbnail?: string;
@@ -117,12 +117,19 @@ export class Track {
     }
 
     async getStream(): Promise<Readable> {
-        // if (this.type === "soundcloud") return await sc.downloadHLS(this.url);
-        if (this.type === "youtube")
-            return ytdl(this.url, {
-                quality: "highestaudio",
-                highWaterMark: 1 << 25
-            });
+        const opts = {
+            quality: "highestaudio",
+            highWaterMark: 1 << 25
+        };
+        if (this.type === "youtube") return ytdl(this.url, opts);
+        if (this.type === "spotify") {
+            const yt = await ytsr.searchOne(
+                `${this.title} - ${this.channel.title}`
+            );
+            if (!yt || !(yt instanceof ytVideo) || !yt.url)
+                throw new Error("Could not resolve spotify track");
+            return ytdl(yt.url, opts);
+        }
         throw new Error("Invalid track type");
     }
 }
@@ -299,7 +306,7 @@ export class GuildAudioManager {
                     ? this._seekMs / 1000
                     : 0;
 
-                const stream = await song.getStream(); //await this.createStream(song);
+                const stream = await song.getStream();
                 this.dispatcher = this.connection.play(stream, {
                     seek: seek,
                     bitrate: "auto",

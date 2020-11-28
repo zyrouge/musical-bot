@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import dayjsduration from "dayjs/plugin/duration";
 import { TrackOptions } from "./Core";
 
+const sptfi = require("spotify-url-info");
 dayjs.extend(dayjsduration);
 
 export function isGuildTextChannel(
@@ -60,55 +61,6 @@ export function getTrackParamsFromYtsr(video: ytVideo) {
     }
     return track;
 }
-
-// type Await<T> = T extends PromiseLike<infer U> ? U : T;
-// export function getTrackParamsFromSoundCloud(
-//     video: Await<ReturnType<typeof sc.getInfo>>
-// ) {
-//     if (
-//         !video.permalink_url ||
-//         !video.user ||
-//         !video.title ||
-//         !video.artwork_url
-//     )
-//         throw new Error("Could not resolove SouncCloud track");
-
-//     const track: TrackOptions = {
-//         url: video.permalink_url,
-//         thumbnail: video.artwork_url,
-//         channelName: video.user.full_name,
-//         channelURL: video.user.permalink_url,
-//         title: video.title,
-//         type: "soundcloud"
-//     };
-//     if (video.created_at) track.uploadedAt = video.created_at;
-//     if (video.duration) {
-//         const dura = dayjs.duration(video.duration);
-//         track.duration = dura.asMilliseconds();
-//     }
-//     return track;
-// }
-
-// export function getTrackParamsFromSoundCloudPlaylist(
-//     videos: sc.getPlaylistInfo
-// ) {
-//     const tracks: TrackOptions[] = videos.tracks.map((video) => {
-//         const track: TrackOptions = {
-//             url: video.url,
-//             thumbnail: video.artwork_url,
-//             channelName: video.author?.name || "Unknown",
-//             channelURL: video.author?.profile || "Unknown",
-//             title: video.title,
-//             type: "soundcloud"
-//         };
-//         if (video.duration) {
-//             const dura = dayjs.duration(video.duration);
-//             track.duration = dura.asMilliseconds();
-//         }
-//         return track;
-//     });
-//     return tracks;
-// }
 
 export function getTrackParamsFromYtplResult(videos: ytpl.result) {
     const tracks: TrackOptions[] = videos.items.map((video) => {
@@ -179,9 +131,87 @@ export const SongFilters = {
 };
 
 export const RegExps = {
+    link: /^(((http|https|ftp):\/\/)?([[a-zA-Z0-9]\-\.])+(\.)([[a-zA-Z0-9]]){2,4}([[a-zA-Z0-9]\/+=%&_\.~?\-]*))*$/,
     youtube: {
         song: /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/,
         playlist: /^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/
     },
-    soundcloud: /^https?:\/\/(soundcloud\.com|snd\.sc)\/(.*)$/
+    soundcloud: /^https?:\/\/(soundcloud\.com|snd\.sc)\/(.*)$/,
+    spotify: {
+        song: /^https?:\/\/(?:open|play)\.spotify\.com\/track\/[\w\d]+$/i,
+        playlist: /https?:\/\/open.spotify.com\/((track|user|artist|album)\/)?[a-zA-Z0-9]+(\/playlist\/[a-zA-Z0-9]+|)/i
+    }
 };
+
+export interface SpotifyTrack {
+    title: string;
+    type: string;
+    track: string;
+    artist: string;
+    image: string;
+    audio: string;
+    link: string;
+    embed: string;
+    date: string;
+    description: string;
+}
+
+export type SpotifyPlaylist = {
+    artists: [
+        {
+            external_urls: {
+                spotify: string;
+            };
+            href: string;
+            id: string;
+            name: string;
+            type: string;
+            uri: string;
+        }
+    ];
+    duration_ms: number;
+    episode: boolean;
+    explicit: boolean;
+    external_urls: {
+        spotify: string;
+    };
+    href: string;
+    id: string;
+    name: string;
+    popularity: number;
+    preview_url: string;
+    type: string;
+    uri: string;
+}[];
+
+export async function getSpotifyTrack(url: string) {
+    const rt: SpotifyTrack = await sptfi.getPreview(url);
+    const track: TrackOptions = {
+        url: rt.link,
+        thumbnail: rt.image,
+        channelName: rt.artist || "Unknown",
+        channelURL: "Unknown",
+        title: rt.title || "Unknown",
+        uploadedAt: rt.date,
+        type: "spotify"
+    };
+    return track;
+}
+
+export async function getSpotifyPlaylist(url: string) {
+    const playlist: SpotifyPlaylist = await sptfi.getTracks(url);
+    const tracks: TrackOptions[] = playlist.map((video) => {
+        const track: TrackOptions = {
+            url:
+                video.external_urls.spotify ||
+                `https://open.spotify.com/track/${video.id}`,
+            channelName: video.artists[0]?.name || "Unknown",
+            channelURL: "Unknown",
+            title: video.name,
+            duration: video.duration_ms,
+            type: "spotify"
+        };
+        return track;
+    });
+    return tracks;
+}

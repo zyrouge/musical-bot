@@ -35,7 +35,7 @@ client.on("ready", () => {
     client.user?.setPresence({
         activity: {
             name: "Music",
-            type: "PLAYING"
+            type: "LISTENING"
         },
         status: "dnd"
     });

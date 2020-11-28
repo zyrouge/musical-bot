@@ -12,7 +12,9 @@ import {
     getTrackParamsFromYtsr,
     Emojis,
     RegExps,
-    getTrackParamsFromYtplResult
+    getTrackParamsFromYtplResult,
+    getSpotifyPlaylist,
+    getSpotifyTrack
 } from "../Utils";
 import ytsr, { Video as ytVideo } from "youtube-sr";
 import ytpl from "ytpl";
@@ -78,6 +80,27 @@ export default class implements Command {
             try {
                 const video = await ytdl.getBasicInfo(args[0]);
                 trackopts = getTrackParamsFromYtdl(video);
+            } catch (err) {
+                return msg.edit(
+                    `${Emojis.sad} Could not resolve video \`${search}\`.`
+                );
+            }
+        } else if (RegExps.spotify.playlist.test(search)) {
+            try {
+                const videos = await getSpotifyPlaylist(search);
+                msg.edit(
+                    `${Emojis.music} Adding **${videos.length} songs** to queue...`
+                );
+                trackopts = videos;
+            } catch (err) {
+                return msg.edit(
+                    `${Emojis.sad} Could not resolve playlist \`${search}\`.`
+                );
+            }
+        } else if (RegExps.spotify.song.test(search)) {
+            try {
+                const video = await getSpotifyTrack(args[0]);
+                trackopts = video;
             } catch (err) {
                 return msg.edit(
                     `${Emojis.sad} Could not resolve video \`${search}\`.`
