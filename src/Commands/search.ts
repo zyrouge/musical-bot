@@ -1,21 +1,12 @@
 import { Message } from "discord.js";
-import {
-    Client,
-    Command,
-    GuildAudioManager,
-    Track,
-    TrackOptions
-} from "../Core";
+import { Client, Command, GuildAudioManager, Track } from "../Core";
 import {
     isGuildTextChannel,
-    getTrackParamsFromYtdl,
     getTrackParamsFromYtsr,
     Emojis,
-    RegExps,
-    getTrackParamsFromYtplResult,
     Colors
 } from "../Utils";
-import ytsr from "ytsr";
+import ytsr, { Video as ytVideo } from "youtube-sr";
 
 export default class implements Command {
     name = "search";
@@ -60,13 +51,13 @@ export default class implements Command {
         );
 
         try {
-            const searches = await ytsr(search, {
-                limit: 5
+            const searches = await ytsr.search(search, {
+                limit: 10
             });
-            const videos = searches.items.filter(
-                (t) => t.type === "video"
-            ) as ytsr.Video[];
-            if (!videos.length || !videos[0])
+            const videos = searches.filter(
+                (t) => t instanceof ytVideo
+            ) as ytVideo[];
+            if (!videos.length)
                 return msg.edit(
                     `${Emojis.sad} No result found for \`${search}\`.`
                 );

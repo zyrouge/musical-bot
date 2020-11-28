@@ -13,15 +13,10 @@ import {
     Emojis,
     RegExps,
     getTrackParamsFromYtplResult
-    // getTrackParamsFromSoundCloud,
-    // getTrackParamsFromSoundCloudPlaylist
 } from "../Utils";
-import ytsr from "ytsr";
+import ytsr, { Video as ytVideo } from "youtube-sr";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
-// import soundcloud from "soundcloud-scraper";
-
-// const SoundCloud = new soundcloud.Client();
 
 export default class implements Command {
     name = "play";
@@ -88,42 +83,16 @@ export default class implements Command {
                     `${Emojis.sad} Could not resolve video \`${search}\`.`
                 );
             }
-            // } else if (RegExps.soundcloud.song.test(search)) {
-            //     try {
-            //         const video =
-            //             (await SoundCloud.getSongInfo(search).catch(() => {})) ||
-            //             undefined;
-            //         if (video) trackopts = getTrackParamsFromSoundCloud(video);
-            //         else {
-            //             const videos =
-            //                 (await SoundCloud.getPlaylist(
-            //                     search
-            //                 ).catch(() => {})) || undefined;
-            //             if (videos)
-            //                 trackopts = getTrackParamsFromSoundCloudPlaylist(
-            //                     videos
-            //                 );
-            //             else throw "No result";
-            //         }
-            //     } catch (err) {
-            //         console.error(err);
-            //         return msg.edit(
-            //             `${Emojis.sad} Could not resolve soundcloud song/playlist \`${search}\`.`
-            //         );
-            //     }
         } else {
             try {
-                const searches = await ytsr(search, {
-                    limit: 1
-                });
-                const videos = searches.items.filter((t) => t.type === "video");
-                if (!videos.length || !videos[0])
+                const video = await ytsr.searchOne(search);
+                if (!video || !(video instanceof ytVideo))
                     return msg.edit(
                         `${Emojis.sad} No result found for \`${search}\`.`
                     );
-                const video = videos[0] as ytsr.Video;
                 trackopts = getTrackParamsFromYtsr(video);
             } catch (err) {
+                console.error(err);
                 return msg.edit(`${Emojis.sad} No results for \`${search}\`.`);
             }
         }

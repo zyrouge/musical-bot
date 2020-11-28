@@ -69,7 +69,7 @@ export class Client extends DiscordClient {
 export type sources = "soundcloud" | "youtube";
 export interface TrackOptions {
     url: string;
-    thumbnail: string;
+    thumbnail?: string;
     channelName: string;
     channelURL: string;
     title: string;
@@ -82,7 +82,7 @@ export class Track {
     title: string;
     url: string;
     duration?: number;
-    thumbnail: string;
+    thumbnail?: string;
     channel: {
         title: string;
         url: string;

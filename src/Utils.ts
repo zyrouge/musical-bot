@@ -1,5 +1,5 @@
 import { DMChannel, NewsChannel, TextChannel } from "discord.js";
-import ytsr from "ytsr";
+import { Video as ytVideo } from "youtube-sr";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
 import dayjs from "dayjs";
@@ -43,16 +43,17 @@ export function getTrackParamsFromYtdl({
     return track;
 }
 
-export function getTrackParamsFromYtsr(video: ytsr.Video) {
+export function getTrackParamsFromYtsr(video: ytVideo) {
+    if (!video.url) throw new Error("Invalid video");
     const track: TrackOptions = {
-        url: video.link,
-        thumbnail: video.thumbnail,
-        channelName: video.author.name,
-        channelURL: video.author.ref,
-        title: video.title,
+        url: video.url,
+        thumbnail: video.thumbnail.displayThumbnailURL("maxresdefault"),
+        channelName: video.channel.name || "Unknown",
+        channelURL: video.channel.url || "Unknown",
+        title: video.title || "Unknown",
         type: "youtube"
     };
-    if (video.uploaded_at) track.uploadedAt = video.uploaded_at;
+    if (video.uploadedAt) track.uploadedAt = video.uploadedAt;
     if (video.duration) {
         const dura = dayjs.duration(video.duration);
         track.duration = dura.asMilliseconds();
