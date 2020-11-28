@@ -85,6 +85,15 @@ export default class implements Command {
                     `${Emojis.sad} Could not resolve video \`${search}\`.`
                 );
             }
+        } else if (RegExps.spotify.song.test(search)) {
+            try {
+                const video = await getSpotifyTrack(args[0]);
+                trackopts = video;
+            } catch (err) {
+                return msg.edit(
+                    `${Emojis.sad} Could not resolve video \`${search}\`.`
+                );
+            }
         } else if (RegExps.spotify.playlist.test(search)) {
             try {
                 const videos = await getSpotifyPlaylist(search);
@@ -95,15 +104,6 @@ export default class implements Command {
             } catch (err) {
                 return msg.edit(
                     `${Emojis.sad} Could not resolve playlist \`${search}\`.`
-                );
-            }
-        } else if (RegExps.spotify.song.test(search)) {
-            try {
-                const video = await getSpotifyTrack(args[0]);
-                trackopts = video;
-            } catch (err) {
-                return msg.edit(
-                    `${Emojis.sad} Could not resolve video \`${search}\`.`
                 );
             }
         } else {
