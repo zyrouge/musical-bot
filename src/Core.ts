@@ -12,7 +12,7 @@ import ytdl from "ytdl-core";
 import ytsr, { Video as ytVideo } from "youtube-sr";
 import ffmpeg from "fluent-ffmpeg";
 import { PassThrough } from "stream";
-import _, { isUndefined } from "lodash";
+import _, { isNumber, isUndefined } from "lodash";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { Emojis, SongFilters } from "./Utils";
@@ -66,7 +66,7 @@ export class Client extends DiscordClient {
     }
 }
 
-export type sources = "soundcloud" | "youtube" | "spotify";
+export type sources = "soundcloud" | "youtube" | "spotify" | "href-stream";
 export interface TrackOptions {
     url: string;
     thumbnail?: string;
@@ -116,20 +116,20 @@ export class Track {
         }
     }
 
-    async getStream(): Promise<Readable> {
+    async getStream(): Promise<Readable | string> {
         const opts = {
             quality: "highestaudio",
             highWaterMark: 1 << 25
         };
         if (this.type === "youtube") return ytdl(this.url, opts);
-        if (this.type === "spotify") {
+        else if (this.type === "spotify") {
             const yt = await ytsr.searchOne(
                 `${this.title} - ${this.channel.title}`
             );
             if (!yt || !(yt instanceof ytVideo) || !yt.url)
                 throw new Error("Could not resolve spotify track");
             return ytdl(yt.url, opts);
-        }
+        } else if (this.type === "href-stream") return this.url;
         throw new Error("Invalid track type");
     }
 }
@@ -351,24 +351,34 @@ export class GuildAudioManager {
     }
 
     async createStream(song: Track) {
-        const baseStream = await song.getStream();
-        const outputStream = new PassThrough();
-        const command = ffmpeg(baseStream)
-            .audioCodec("libmp3lame")
-            .noVideo()
-            .audioBitrate(128)
-            .format("mp3");
-        const filters = this.getFilters();
-        if (filters.length) command.outputOption(`-af ${filters.join(",")}`);
-        command.pipe(outputStream, { end: true });
+        try {
+            const baseStream = await song.getStream();
+            const outputStream = new PassThrough();
+            const command = ffmpeg(baseStream)
+                .audioCodec("libmp3lame")
+                .noVideo()
+                .audioBitrate(128)
+                .format("mp3");
+            const filters = this.getFilters();
+            if (filters.length)
+                command.outputOption(`-af ${filters.join(",")}`);
+            command.pipe(outputStream, { end: true });
 
-        outputStream.on("close", () => {
-            if (!baseStream.destroyed) baseStream.destroy();
-            if (!outputStream.destroyed) outputStream.destroy();
-            command.kill("SIGSTOP");
-        });
+            outputStream.on("close", () => {
+                if (baseStream instanceof Readable && !baseStream.destroyed)
+                    baseStream.destroy();
+                if (!outputStream.destroyed) outputStream.destroy();
+                command.kill("SIGSTOP");
+            });
 
-        return outputStream;
+            return outputStream;
+        } catch (err) {
+            const index = this._songs.findIndex((x) => x.url === song.url);
+            if (isNumber(index)) this.removeTrack(index);
+            this.textChannel.send(
+                `Error while playing song **${song.title}**, skipping. to next`
+            );
+        }
     }
 
     handleEnd() {

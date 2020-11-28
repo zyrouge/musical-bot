@@ -16,6 +16,7 @@ import {
     getSpotifyPlaylist,
     getSpotifyTrack
 } from "../Utils";
+import URLParser from "url";
 import ytsr, { Video as ytVideo } from "youtube-sr";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
@@ -106,6 +107,16 @@ export default class implements Command {
                     `${Emojis.sad} Could not resolve playlist \`${search}\`.`
                 );
             }
+        } else if (RegExps.link.test(search)) {
+            const url = URLParser.parse(args[0]);
+            const base = url.hostname || url.host || "Unknown";
+            trackopts = {
+                title: `${base} - Stream`,
+                url: url.href,
+                channelName: "Unknown",
+                channelURL: base,
+                type: "href-stream"
+            };
         } else {
             try {
                 const video = await ytsr.searchOne(search);
