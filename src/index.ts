@@ -133,6 +133,7 @@ client.on("voiceStateUpdate", (oldState, newState) => {
                             `${Emojis.info} Left \`#${queue.voiceChannel.name}\` due to lack of listerners.`
                         );
                         queue.voiceChannel.leave();
+                        client.music.delete(oldState.guild.id);
                     }
                 }, 15 * 1000);
             }
