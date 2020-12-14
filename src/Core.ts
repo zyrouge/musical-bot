@@ -37,6 +37,12 @@ export interface ClientOptions extends DiscordClientOptions {
     prefix: string;
 }
 
+const getSeekWorks = (ms: number): string => {
+    const dur = dayjs.duration(ms);
+    // @ts-ignore
+    return dur.format(`HH:mm:ss.SSS`);
+} 
+
 class CommandsManager {
     labels: Collection<string, Command>;
     aliases: Collection<string, string>;
@@ -362,7 +368,7 @@ export class GuildAudioManager {
             const filters = this.getFilters();
             if (filters.length)
                 command.outputOption(`-af ${filters.join(",")}`);
-            if (opts.seek) command.outputOption(`-ss '${opts.seek}ms'`);
+            if (opts.seek) command.outputOption(`-ss ${getSeekWorks(opts.seek)}`);
             command.pipe(outputStream, { end: true });
 
             outputStream.on("close", () => {
