@@ -170,7 +170,7 @@ export class GuildAudioManager {
         this.textChannel = textChannel;
         this.voiceChannel = voiceChannel;
         this.filters = new Set();
-        this.volume = 150;
+        this.volume = 100;
     }
 
     get songs() {
@@ -323,9 +323,8 @@ export class GuildAudioManager {
                 });
                 this.dispatcher = this.connection.play(playStream, {
                     bitrate: "auto",
-                    volume: 0
+                    volume: this.volume / 200
                 });
-                this.dispatcher.setVolumeLogarithmic(this.volume / 200);
                 this._lastCachedSeek = {
                     id: song.url,
                     seek: totalSeek
