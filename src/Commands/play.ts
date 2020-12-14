@@ -47,6 +47,11 @@ export default class implements Command {
                 `${Emojis.err} You must be in a Voice Channel to use \`${this.name}\` command.`
             );
 
+        if (!voiceChannel.joinable)
+            return message.channel.send(
+                `${Emojis.err} \`#${voiceChannel.name}\` is not joinable by me.`
+            );
+
         let queue = client.music.get(message.guild.id);
         if (!queue) {
             queue = new GuildAudioManager(message.channel, voiceChannel);
