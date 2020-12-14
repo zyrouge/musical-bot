@@ -18,6 +18,8 @@ import duration from "dayjs/plugin/duration";
 import { Emojis, SongFilters } from "./Utils";
 import { Readable } from "stream";
 
+const ffmpegPath: string = require("ffmpeg-static");
+ffmpeg.setFfmpegPath(ffmpegPath);
 dayjs.extend(duration);
 
 export interface Command {
