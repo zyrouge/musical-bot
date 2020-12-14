@@ -157,6 +157,10 @@ export class GuildAudioManager {
     volume: number;
     private _dontChangeIndex?: boolean;
     private _seekMs?: number;
+    private _lastCachedSeek?: {
+        id: string;
+        seek: number;
+    };
     private lastMessage?: Message;
 
     constructor(textChannel: TextChannel, voiceChannel: VoiceChannel) {
@@ -311,13 +315,21 @@ export class GuildAudioManager {
 
             try {
                 const songStream = await song.getStream();
+                let totalSeek = 0;
+                if (this._seekMs) totalSeek += this._seekMs;
+                if (this._lastCachedSeek && this._lastCachedSeek.id === song.url) totalSeek += this._lastCachedSeek.seek;
                 const playStream = this.createPlayStream(songStream, {
-                    seek: !isUndefined(this._seekMs) ? this._seekMs : 0
+                    seek: !isUndefined(this._seekMs) ? this._seekMs : 0,
                 });
                 this.dispatcher = this.connection.play(playStream, {
                     bitrate: "auto",
-                    volume: this.volume / 200
+                    volume: 0
                 });
+                this.dispatcher.setVolumeLogarithmic(this.volume / 200);
+                this._lastCachedSeek = {
+                    id: song.url,
+                    seek: totalSeek
+                }
                 delete this._seekMs;
 
                 this.dispatcher.on("start", async () => {
@@ -330,6 +342,7 @@ export class GuildAudioManager {
                     this.lastMessage?.delete().catch(() => {});
                     if (!this._dontChangeIndex) this.incrementIndex();
                     delete this._dontChangeIndex;
+                    delete this._lastCachedSeek;
                     await this.handleEnd();
                 });
 
