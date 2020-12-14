@@ -302,13 +302,11 @@ export class GuildAudioManager {
             }
 
             try {
-                const seek = !isUndefined(this._seekMs)
-                    ? this._seekMs / 1000
-                    : 0;
-
-                const stream = await song.getStream();
-                this.dispatcher = this.connection.play(stream, {
-                    seek: seek,
+                const songStream = await song.getStream();
+                const playStream = this.createPlayStream(songStream, {
+                    seek: !isUndefined(this._seekMs) ? this._seekMs : 0
+                });
+                this.dispatcher = this.connection.play(playStream, {
                     bitrate: "auto",
                     volume: this.volume / 200
                 });
@@ -329,11 +327,12 @@ export class GuildAudioManager {
 
                 this.dispatcher.on("error", console.error);
             } catch (err) {
-                this.incrementIndex(true);
-                await this.handleEnd();
+                const index = this._songs.findIndex((x) => x.url === song.url);
+                if (isNumber(index)) this.removeTrack(index);
                 this.textChannel.send(
-                    `${Emojis.sad} Could not play **${song.title}**`
+                    `${Emojis.sad} Error while playing song **${song.title}**, skipping. to next`
                 );
+                this.handleEnd();
             }
         } catch (err) {
             console.error(err);
@@ -350,11 +349,10 @@ export class GuildAudioManager {
         this.dispatcher.end();
     }
 
-    async createStream(song: Track) {
+    createPlayStream(input: Readable | string, opts: { seek?: number } = {}) {
         try {
-            const baseStream = await song.getStream();
             const outputStream = new PassThrough();
-            const command = ffmpeg(baseStream)
+            const command = ffmpeg(input)
                 .audioCodec("libmp3lame")
                 .noVideo()
                 .audioBitrate(128)
@@ -362,22 +360,20 @@ export class GuildAudioManager {
             const filters = this.getFilters();
             if (filters.length)
                 command.outputOption(`-af ${filters.join(",")}`);
+            if (opts.seek) command.outputOption(`-ss '${opts.seek}ms'`);
             command.pipe(outputStream, { end: true });
 
             outputStream.on("close", () => {
-                if (baseStream instanceof Readable && !baseStream.destroyed)
-                    baseStream.destroy();
+                if (input instanceof Readable && !input.destroyed)
+                    input.destroy();
                 if (!outputStream.destroyed) outputStream.destroy();
                 command.kill("SIGSTOP");
             });
 
             return outputStream;
         } catch (err) {
-            const index = this._songs.findIndex((x) => x.url === song.url);
-            if (isNumber(index)) this.removeTrack(index);
-            this.textChannel.send(
-                `Error while playing song **${song.title}**, skipping. to next`
-            );
+            throw new Error(err);
+            
         }
     }
 

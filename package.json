@@ -29,7 +29,7 @@
         "lodash": "^4.17.20",
         "spotify-url-info": "^2.2.0",
         "youtube-sr": "^2.0.4",
-        "ytdl-core": "^4.1.2",
+        "ytdl-core": "^4.1.4",
         "ytpl": "^1.0.1"
     },
     "devDependencies": {
